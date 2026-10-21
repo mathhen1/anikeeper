@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "AniKeeper",
+    "slug": "anikeeper",
+    "scheme": "anikeeper",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "android": {
+      "package": "com.anikeeper.app"
+    },
+    "plugins": ["expo-router"]
+  }
+}
