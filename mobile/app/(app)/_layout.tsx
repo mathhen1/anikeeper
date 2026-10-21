@@ -11,11 +11,12 @@ export default function AppLayout() {
   if (!isAuthenticated) return <Redirect href="/(public)/login" />;
 
   return (
-    <Tabs screenOptions={{ headerShown: false, tabBarStyle: { backgroundColor: colors.tabBar, borderTopColor: colors.border, height: 86, paddingTop: 10, paddingBottom: 24 }, tabBarActiveTintColor: colors.accent, tabBarInactiveTintColor: colors.muted, tabBarLabelStyle: { fontSize: 10, fontWeight: '600' } }}>
-      <Tabs.Screen name="index" options={{ title: 'Minha lista', tabBarIcon: ({ color, size }) => <Ionicons name="albums-outline" color={color} size={size} /> }} />
+    <Tabs initialRouteName="index" screenOptions={{ headerShown: false, tabBarStyle: { backgroundColor: colors.tabBar, borderTopColor: colors.border, height: 86, paddingTop: 10, paddingBottom: 24 }, tabBarActiveTintColor: colors.accent, tabBarInactiveTintColor: colors.muted, tabBarLabelStyle: { fontSize: 10, fontWeight: '600' } }}>
+      <Tabs.Screen name="index" options={{ title: 'Início', tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" color={color} size={size} /> }} />
+      <Tabs.Screen name="mylist" options={{ title: 'Minha lista', tabBarIcon: ({ color, size }) => <Ionicons name="albums-outline" color={color} size={size} /> }} />
+      <Tabs.Screen name="add-anime" options={{ title: 'Adicionar anime', tabBarIcon: ({ color, size }) => <Ionicons name="search-outline" color={color} size={size} /> }} />
       <Tabs.Screen name="profile" options={{ title: 'Perfil', tabBarIcon: ({ color, size }) => <Ionicons name="person-circle-outline" color={color} size={size} /> }} />
       <Tabs.Screen name="anime/[id]" options={{ href: null }} />
-      <Tabs.Screen name="add-anime" options={{ href: null }} />
     </Tabs>
   );
 }

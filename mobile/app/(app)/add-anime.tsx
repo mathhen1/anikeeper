@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AnimeArtwork } from '@/src/components/AnimeArtwork';
@@ -14,9 +14,15 @@ type TypeFilter = (typeof typeFilters)[number];
 
 export default function AddAnimeScreen() {
   const { colors } = useTheme();
+  const params = useLocalSearchParams<{ query?: string | string[] }>();
   const [query, setQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<TypeFilter>('Todos');
   const [history, setHistory] = useState<AnimeInfo[]>([]);
+
+  useEffect(() => {
+    const initialQuery = Array.isArray(params.query) ? params.query[0] : params.query;
+    setQuery(initialQuery ?? '');
+  }, [params.query]);
 
   useEffect(() => {
     AsyncStorage.getItem(searchHistoryStorageKey)
@@ -60,14 +66,10 @@ export default function AddAnimeScreen() {
   return (
     <Screen scroll style={styles.screen}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.surface }]} accessibilityRole="button" accessibilityLabel="Voltar">
-          <Ionicons name="arrow-back" size={20} color={colors.text} />
-        </Pressable>
         <View style={styles.headerCopy}>
           <Text style={[styles.eyebrow, { color: colors.muted }]}>SUA PRÓXIMA HISTÓRIA</Text>
           <Text style={[styles.title, { color: colors.text }]}>Adicionar anime</Text>
         </View>
-        <View style={{ width: 38 }} />
       </View>
 
       <View style={[styles.searchBox, { backgroundColor: colors.input, borderColor: colors.border }]}>
@@ -132,9 +134,8 @@ export default function AddAnimeScreen() {
 
 const styles = StyleSheet.create({
   screen: { paddingTop: 12, paddingBottom: 18 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 21 },
-  backButton: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  headerCopy: { alignItems: 'center' },
+  header: { marginBottom: 21 },
+  headerCopy: { alignItems: 'flex-start' },
   eyebrow: { fontSize: 8, fontWeight: '700', letterSpacing: 1.1, marginBottom: 4 },
   title: { fontSize: 19, fontWeight: '800', letterSpacing: -0.3 },
   searchBox: { minHeight: 52, borderWidth: 1, borderRadius: 15, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14 },
