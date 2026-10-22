@@ -28,7 +28,7 @@ export default function MyListScreen() {
   const displayName = localName.trim().split(/\s+/)[0] || 'Animeiro';
   const avatarInitial = displayName.charAt(0).toUpperCase();
   const [selectedList, setSelectedList] =
-    useState<(typeof localAnimeListOptions)[number]['key']>('watching');
+    useState<(typeof localAnimeListOptions)[number]['key']>('completed');
   const [animeLists, setAnimeLists] =
     useState<LocalAnimeLists>(emptyLocalAnimeLists);
   const currentList = localAnimeListOptions.find(
