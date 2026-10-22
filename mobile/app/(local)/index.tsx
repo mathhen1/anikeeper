@@ -314,8 +314,8 @@ export default function HomeScreen() {
 
       <ProfileSummaryCard
         profileName={localName.trim() || 'Animeiro'}
+        username={localName}
         description="Sua coleção em um só lugar"
-        completedAnimes={animeLists.completed}
       />
 
       <View style={styles.sectionHeader}>

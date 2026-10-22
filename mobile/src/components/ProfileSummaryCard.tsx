@@ -1,32 +1,67 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { AnimeInfo } from '@/src/types/anime';
+import { getLocalAnimeLists } from '@/src/data/localAnimeLists';
+import {
+  getOrCreateProfileStats,
+  ProfileStats,
+  readProfileStatsCache,
+  subscribeToProfileStats,
+} from '@/src/data/profileStatsCache';
 import { useTheme } from '@/src/theme/ThemeContext';
 
 type ProfileSummaryCardProps = {
   profileName: string;
+  username: string;
   description: string;
-  completedAnimes: AnimeInfo[];
   topSpacing?: number;
 };
 
 export function ProfileSummaryCard({
   profileName,
+  username,
   description,
-  completedAnimes,
   topSpacing = 19,
 }: ProfileSummaryCardProps) {
   const { colors } = useTheme();
-  const completedAnimeCount = completedAnimes.length;
-  const completedEpisodeCount = completedAnimes.reduce(
-    (totalEpisodes, anime) => totalEpisodes + anime.episodes,
-    0,
-  );
-  const completedMinutes = completedAnimes.reduce((totalMinutes, anime) => {
-    if (anime.episodeLength == null) return totalMinutes;
-    return totalMinutes + anime.episodeLength * anime.episodes;
-  }, 0);
-  const watchedHours = Math.round(completedMinutes / 60);
+  const [loadedStats, setLoadedStats] = useState<{
+    username: string;
+    stats: ProfileStats | null;
+  }>(() => ({ username, stats: readProfileStatsCache(username) }));
+  const stats =
+    loadedStats.username === username
+      ? loadedStats.stats
+      : readProfileStatsCache(username);
+
+  useEffect(() => {
+    setLoadedStats({ username, stats: readProfileStatsCache(username) });
+    if (!username.trim()) return;
+
+    let isActive = true;
+    const unsubscribe = subscribeToProfileStats(username, (updatedStats) => {
+      setLoadedStats({ username, stats: updatedStats });
+    });
+
+    getOrCreateProfileStats(username, async () => {
+      const localLists = await getLocalAnimeLists(username);
+      return localLists.completed;
+    })
+      .then((profileStats) => {
+        if (isActive) setLoadedStats({ username, stats: profileStats });
+      })
+      .catch((error: unknown) => {
+        if (isActive) console.warn('Could not load profile stats.', error);
+      });
+
+    return () => {
+      isActive = false;
+      unsubscribe();
+    };
+  }, [username]);
+
+  const completedAnimeCount = stats?.completedAnimeCount ?? '—';
+  const completedEpisodeCount = stats?.completedEpisodeCount ?? '—';
+  const watchedHours = stats?.watchedHours ?? '—';
 
   return (
     <View

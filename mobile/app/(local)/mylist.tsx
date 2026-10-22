@@ -83,8 +83,8 @@ export default function MyListScreen() {
       </View>
       <ProfileSummaryCard
         profileName={localName.trim() || 'Animeiro'}
+        username={localName}
         description="No seu ritmo."
-        completedAnimes={animeLists.completed}
         topSpacing={0}
       />
       <View style={styles.sectionHeader}>

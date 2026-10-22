@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AnimeInfo } from '@/src/types/anime';
+import { updateProfileStatsCache } from '@/src/data/profileStatsCache';
 
 export const localAnimeListOptions = [
   {
@@ -136,6 +137,7 @@ export async function addAnimeToLocalList(
     getStorageKey(username),
     JSON.stringify(updatedLists),
   );
+  updateProfileStatsCache(username, updatedLists.completed);
 
   return updatedLists;
 }
@@ -155,6 +157,7 @@ export async function removeAnimeFromLocalLists(
     getStorageKey(username),
     JSON.stringify(updatedLists),
   );
+  updateProfileStatsCache(username, updatedLists.completed);
   return updatedLists;
 }
 
