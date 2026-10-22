@@ -1,9 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Linking,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { Screen } from '@/src/components/Screen';
 import { useAuth } from '@/src/auth/AuthContext';
+import {
+  getLocalProfilePhoto,
+  saveLocalProfilePhoto,
+} from '@/src/data/localProfilePhoto';
 import { ThemeMode, useTheme } from '@/src/theme/ThemeContext';
 import {
   emptyLocalAnimeLists,
@@ -36,8 +53,13 @@ const menuItems: {
 export default function ProfileScreen() {
   const { colors, mode, setMode } = useTheme();
   const { localName, signOut } = useAuth();
+  const { width: screenWidth } = useWindowDimensions();
   const displayName = localName.trim() || 'Perfil local';
   const avatarInitial = displayName.charAt(0).toUpperCase();
+  const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
+  const [isPhotoModalVisible, setIsPhotoModalVisible] = useState(false);
+  const [isChangingPhoto, setIsChangingPhoto] = useState(false);
+  const photoSize = Math.min(screenWidth - 48, 420);
   const [animeLists, setAnimeLists] =
     useState<LocalAnimeLists>(emptyLocalAnimeLists);
   const savedAnimeCount =
@@ -62,6 +84,20 @@ export default function ProfileScreen() {
                 : 'Não foi possível ler seus animes salvos.',
             );
         });
+      getLocalProfilePhoto(localName)
+        .then((photoUri) => {
+          if (isActive) setProfilePhotoUri(photoUri);
+        })
+        .catch((error: unknown) => {
+          if (isActive) {
+            Alert.alert(
+              'Erro ao carregar foto',
+              error instanceof Error
+                ? error.message
+                : 'Não foi possível carregar sua foto de perfil.',
+            );
+          }
+        });
       return () => {
         isActive = false;
       };
@@ -75,6 +111,75 @@ export default function ProfileScreen() {
 
   const chooseTheme = (selectedMode: ThemeMode) => setMode(selectedMode);
 
+  const changeProfilePhoto = async () => {
+    setIsChangingPhoto(true);
+
+    try {
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        const permissionActions = permission.canAskAgain
+          ? [{ text: 'Entendi', style: 'cancel' as const }]
+          : [
+              {
+                text: 'Abrir configurações',
+                onPress: () => Linking.openSettings(),
+              },
+              { text: 'Cancelar', style: 'cancel' as const },
+            ];
+
+        Alert.alert(
+          'Acesso à galeria necessário',
+          'Permita o acesso às fotos para escolher uma imagem de perfil.',
+          permissionActions,
+        );
+        return;
+      }
+
+      const selection = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (selection.canceled || !selection.assets[0]) return;
+
+      const savedPhotoUri = await saveLocalProfilePhoto(
+        localName,
+        selection.assets[0].uri,
+      );
+      setProfilePhotoUri(savedPhotoUri);
+    } catch (error) {
+      Alert.alert(
+        'Não foi possível alterar a foto',
+        error instanceof Error
+          ? error.message
+          : 'Tente selecionar a imagem novamente.',
+      );
+    } finally {
+      setIsChangingPhoto(false);
+    }
+  };
+
+  const showProfilePhotoOptions = () => {
+    const actions = profilePhotoUri
+      ? [
+          {
+            text: 'Ver foto',
+            onPress: () => setIsPhotoModalVisible(true),
+          },
+          { text: 'Alterar foto', onPress: changeProfilePhoto },
+          { text: 'Cancelar', style: 'cancel' as const },
+        ]
+      : [
+          { text: 'Alterar foto', onPress: changeProfilePhoto },
+          { text: 'Cancelar', style: 'cancel' as const },
+        ];
+
+    Alert.alert('Foto de perfil', 'O que você deseja fazer?', actions);
+  };
+
   return (
     <Screen scroll style={styles.screen}>
       <Text style={[styles.pageTitle, { color: colors.text }]}>Perfil</Text>
@@ -84,11 +189,34 @@ export default function ProfileScreen() {
           { backgroundColor: colors.surface, borderColor: colors.border },
         ]}
       >
-        <View style={[styles.avatar, { backgroundColor: colors.accentSoft }]}>
-          <Text style={[styles.avatarText, { color: colors.accent }]}>
-            {avatarInitial}
-          </Text>
-        </View>
+        <Pressable
+          onPress={showProfilePhotoOptions}
+          disabled={isChangingPhoto}
+          accessibilityRole="button"
+          accessibilityLabel="Opções da foto de perfil"
+          style={({ pressed }) => [
+            styles.avatar,
+            { backgroundColor: colors.accentSoft, opacity: pressed ? 0.8 : 1 },
+          ]}
+        >
+          {isChangingPhoto ? (
+            <ActivityIndicator color={colors.accent} />
+          ) : profilePhotoUri ? (
+            <Image
+              source={{ uri: profilePhotoUri }}
+              style={styles.avatarImage}
+            />
+          ) : (
+            <Text style={[styles.avatarText, { color: colors.accent }]}>
+              {avatarInitial}
+            </Text>
+          )}
+          <View
+            style={[styles.avatarEditBadge, { backgroundColor: colors.accent }]}
+          >
+            <Ionicons name="camera-outline" size={12} color="#FFFFFF" />
+          </View>
+        </Pressable>
         <Text style={[styles.name, { color: colors.text }]}>{displayName}</Text>
         <Text style={[styles.email, { color: colors.muted }]}>
           Dados salvos neste aparelho
@@ -274,6 +402,30 @@ export default function ProfileScreen() {
       <Text style={[styles.version, { color: colors.muted }]}>
         ANIKEEPER · VERSÃO 1.0.0
       </Text>
+      <Modal
+        visible={isPhotoModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsPhotoModalVisible(false)}
+      >
+        <View style={styles.photoModalBackdrop}>
+          <Pressable
+            onPress={() => setIsPhotoModalVisible(false)}
+            style={styles.photoModalClose}
+            accessibilityRole="button"
+            accessibilityLabel="Fechar foto"
+          >
+            <Ionicons name="close" size={24} color="#FFFFFF" />
+          </Pressable>
+          {profilePhotoUri ? (
+            <Image
+              source={{ uri: profilePhotoUri }}
+              resizeMode="contain"
+              style={{ width: photoSize, height: photoSize, borderRadius: 20 }}
+            />
+          ) : null}
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -294,8 +446,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
+    overflow: 'visible',
+  },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 23 },
+  avatarEditBadge: {
+    position: 'absolute',
+    right: -4,
+    bottom: -4,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   avatarText: { fontSize: 25, fontWeight: '800' },
+  photoModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  photoModalClose: {
+    position: 'absolute',
+    top: 56,
+    right: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    zIndex: 1,
+  },
   name: { fontSize: 17, fontWeight: '700' },
   email: { fontSize: 12, marginTop: 5 },
   memberBadge: {
