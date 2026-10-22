@@ -25,8 +25,6 @@ export default function MyListScreen() {
   const { colors } = useTheme();
   const { width: windowWidth } = useWindowDimensions();
   const { localName } = useAuth();
-  const displayName = localName.trim().split(/\s+/)[0] || 'Animeiro';
-  const avatarInitial = displayName.charAt(0).toUpperCase();
   const [selectedList, setSelectedList] =
     useState<(typeof localAnimeListOptions)[number]['key']>('completed');
   const [animeLists, setAnimeLists] =
@@ -67,19 +65,9 @@ export default function MyListScreen() {
   return (
     <Screen scroll style={styles.screen}>
       <View style={styles.header}>
-        <View>
-          <Text style={[styles.eyebrow, { color: colors.muted }]}>
-            QUARTA-FEIRA, 20 OUT
-          </Text>
-          <Text style={[styles.greeting, { color: colors.text }]}>
-            Olá, {displayName} <Text>✦</Text>
-          </Text>
-        </View>
-        <View style={[styles.avatar, { backgroundColor: colors.accentSoft }]}>
-          <Text style={[styles.avatarText, { color: colors.accent }]}>
-            {avatarInitial}
-          </Text>
-        </View>
+        <Text style={[styles.eyebrow, { color: colors.muted }]}>
+          QUARTA-FEIRA, 20 OUT
+        </Text>
       </View>
       <ProfileSummaryCard
         profileName={localName.trim() || 'Animeiro'}
@@ -254,15 +242,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1.3,
     marginBottom: 6,
   },
-  greeting: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
-  avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: { fontWeight: '800', fontSize: 17 },
   sectionHeader: { marginTop: 29, marginBottom: 12 },
   sectionTitle: { fontSize: 18, fontWeight: '700' },
   sectionSubtitle: { fontSize: 11, marginTop: 4 },

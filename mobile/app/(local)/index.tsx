@@ -175,8 +175,6 @@ function AnimeRecommendationSection({
 export default function HomeScreen() {
   const { colors } = useTheme();
   const { localName } = useAuth();
-  const displayName = localName.trim().split(/\s+/)[0] || 'Animeiro';
-  const avatarInitial = displayName.charAt(0).toUpperCase();
   const [mostFavorited, setMostFavorited] = useState<AnimeRecommendationState>({
     items: [],
     isLoading: true,
@@ -269,24 +267,7 @@ export default function HomeScreen() {
   return (
     <Screen scroll style={styles.screen}>
       <View style={styles.header}>
-        <View>
-          <Text style={[styles.eyebrow, { color: colors.muted }]}>
-            ANIKEEPER
-          </Text>
-          <Text style={[styles.greeting, { color: colors.text }]}>
-            Olá, {displayName} <Text style={{ color: colors.accent }}>✦</Text>
-          </Text>
-        </View>
-        <Pressable
-          onPress={() => router.push('/(local)/profile')}
-          style={[styles.avatar, { backgroundColor: colors.accentSoft }]}
-          accessibilityRole="button"
-          accessibilityLabel="Abrir perfil"
-        >
-          <Text style={[styles.avatarText, { color: colors.accent }]}>
-            {avatarInitial}
-          </Text>
-        </Pressable>
+        <Text style={[styles.eyebrow, { color: colors.muted }]}>ANIKEEPER</Text>
       </View>
 
       <Pressable
@@ -393,15 +374,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
     marginBottom: 5,
   },
-  greeting: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
-  avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { fontWeight: '800', fontSize: 17 },
   searchCard: {
     minHeight: 46,
     flexDirection: 'row',

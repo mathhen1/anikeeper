@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { getLocalAnimeLists } from '@/src/data/localAnimeLists';
 import {
   getOrCreateProfileStats,
@@ -74,19 +75,38 @@ export function ProfileSummaryCard({
         },
       ]}
     >
-      <View>
-        <Text
-          style={[
-            styles.eyebrow,
-            { color: colors.accent },
-            { textTransform: 'uppercase' },
+      <View style={styles.header}>
+        <View style={styles.profileCopy}>
+          <Text
+            style={[
+              styles.eyebrow,
+              { color: colors.accent },
+              { textTransform: 'uppercase' },
+            ]}
+          >
+            {profileName}'S PROFILE
+          </Text>
+          <Text style={[styles.title, { color: colors.text }]}>
+            {description}
+          </Text>
+        </View>
+        <Pressable
+          onPress={() => router.push('/(local)/profile')}
+          style={({ pressed }) => [
+            styles.avatar,
+            {
+              backgroundColor: colors.accentSoft,
+              opacity: pressed ? 0.75 : 1,
+            },
           ]}
+          accessibilityRole="button"
+          accessibilityLabel="Abrir perfil"
+          accessibilityHint="Abre as configurações do seu perfil local"
         >
-          {profileName}'S PROFILE
-        </Text>
-        <Text style={[styles.title, { color: colors.text }]}>
-          {description}
-        </Text>
+          <Text style={[styles.avatarText, { color: colors.accent }]}>
+            {profileName.trim().charAt(0).toUpperCase() || 'A'}
+          </Text>
+        </Pressable>
       </View>
       <View style={styles.statsSection}>
         <Text style={[styles.statsHeading, { color: colors.text }]}>
@@ -144,6 +164,20 @@ export function ProfileSummaryCard({
 
 const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: 19, padding: 17 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  profileCopy: { flex: 1, minWidth: 0, paddingTop: 3 },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: { fontSize: 17, fontWeight: '800' },
   eyebrow: { fontSize: 9, fontWeight: '700', letterSpacing: 1.2 },
   title: { fontSize: 14, fontWeight: '700', marginTop: 5 },
   statsSection: { marginTop: 16, gap: 11 },
