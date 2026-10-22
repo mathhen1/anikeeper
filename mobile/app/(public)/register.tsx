@@ -31,7 +31,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <Screen>
+    <Screen safeAreaEdges={['top', 'bottom']}>
       <View style={styles.top}>
         <Link href="/(public)/login" asChild>
           <Pressable style={[styles.back, { backgroundColor: colors.surface }]}>

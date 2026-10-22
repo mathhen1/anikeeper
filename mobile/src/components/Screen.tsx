@@ -1,35 +1,52 @@
-import { PropsWithChildren } from 'react';
-import { ScrollView, StyleSheet, View, ViewStyle } from 'react-native';
+import type { PropsWithChildren } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import type { Edge } from 'react-native-safe-area-context';
+import type { ViewStyle } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeContext';
+
+const defaultSafeAreaEdges: Edge[] = ['top'];
 
 export function Screen({
   children,
   style,
   scroll = false,
-}: PropsWithChildren<{ style?: ViewStyle; scroll?: boolean }>) {
+  safeAreaEdges = defaultSafeAreaEdges,
+}: PropsWithChildren<{
+  style?: ViewStyle;
+  scroll?: boolean;
+  safeAreaEdges?: Edge[];
+}>) {
   const { colors } = useTheme();
   if (scroll) {
     return (
-      <ScrollView
-        style={[styles.scrollView, { backgroundColor: colors.background }]}
-        contentContainerStyle={[styles.scrollContent, style]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+      <SafeAreaView
+        edges={safeAreaEdges}
+        style={[styles.safeArea, { backgroundColor: colors.background }]}
       >
-        {children}
-      </ScrollView>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[styles.scrollContent, style]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {children}
+        </ScrollView>
+      </SafeAreaView>
     );
   }
   return (
-    <View
-      style={[styles.content, { backgroundColor: colors.background }, style]}
+    <SafeAreaView
+      edges={safeAreaEdges}
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
     >
-      {children}
-    </View>
+      <View style={[styles.content, style]}>{children}</View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1 },
   content: { flex: 1, paddingHorizontal: 24, paddingTop: 18 },
   scrollView: { flex: 1 },
   scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 18 },

@@ -8,7 +8,7 @@ export default function WelcomeScreen() {
   const { colors } = useTheme();
 
   return (
-    <Screen scroll style={styles.screen}>
+    <Screen scroll style={styles.screen} safeAreaEdges={['top', 'bottom']}>
       <View style={styles.brand}>
         <View style={[styles.logo, { backgroundColor: colors.accentSoft }]}>
           <Ionicons name="bookmark" size={23} color={colors.accent} />

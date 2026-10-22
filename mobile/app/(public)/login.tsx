@@ -33,7 +33,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <Screen>
+    <Screen safeAreaEdges={['top', 'bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.container}

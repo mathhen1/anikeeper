@@ -3,10 +3,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '@/src/auth/AuthContext';
 import { useTheme } from '@/src/theme/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function LocalLayout() {
   const { authMode, isAuthenticated, isReady } = useAuth();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   if (!isReady) {
     return (
@@ -36,9 +38,9 @@ export default function LocalLayout() {
         tabBarStyle: {
           backgroundColor: colors.tabBar,
           borderTopColor: colors.border,
-          height: 86,
+          height: 62 + insets.bottom,
           paddingTop: 10,
-          paddingBottom: 24,
+          paddingBottom: Math.max(insets.bottom, 10),
         },
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
