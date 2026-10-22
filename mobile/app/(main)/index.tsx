@@ -136,7 +136,7 @@ function AnimeRecommendationSection({
               key={anime.id}
               onPress={() =>
                 router.push({
-                  pathname: '/(local)/anime/[id]',
+                  pathname: '/(main)/anime/[id]',
                   params: { id: anime.id },
                 })
               }
@@ -243,7 +243,7 @@ export default function HomeScreen() {
       </View>
 
       <Pressable
-        onPress={() => router.push('/(local)/add-anime')}
+        onPress={() => router.push('/(main)/add-anime')}
         style={({ pressed }) => [
           styles.searchCard,
           {
@@ -274,7 +274,7 @@ export default function HomeScreen() {
       <AnimeListSummaryCard
         username={localName}
         items={collectionLists}
-        onPress={() => router.push('/(local)/mylist')}
+        onPress={() => router.push('/(main)/mylist')}
       />
       <AnimeRecommendationSection
         title="Favoritos da galera"

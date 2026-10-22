@@ -1,15 +1,16 @@
 import { Tabs, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '@/src/auth/AuthContext';
 import { useTheme } from '@/src/theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ActivityIndicator, View } from 'react-native';
 
-export default function AppLayout() {
+export default function MainLayout() {
   const { authMode, isAuthenticated, isReady } = useAuth();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  if (!isReady)
+
+  if (!isReady) {
     return (
       <View
         style={{
@@ -22,10 +23,9 @@ export default function AppLayout() {
         <ActivityIndicator color={colors.accent} />
       </View>
     );
-  if (isAuthenticated && authMode === 'local')
-    return <Redirect href="/(local)" />;
-  if (!isAuthenticated || authMode !== 'official')
-    return <Redirect href="/(public)" />;
+  }
+
+  if (!isAuthenticated || !authMode) return <Redirect href="/(public)" />;
 
   return (
     <Tabs

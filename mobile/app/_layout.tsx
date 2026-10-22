@@ -19,8 +19,7 @@ function RootNavigator() {
         }}
       >
         <Stack.Screen name="(public)" />
-        <Stack.Screen name="(app)" />
-        <Stack.Screen name="(local)" />
+        <Stack.Screen name="(main)" />
       </Stack>
     </>
   );

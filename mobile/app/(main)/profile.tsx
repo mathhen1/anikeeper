@@ -1,9 +1,34 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Linking,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { Screen } from '@/src/components/Screen';
 import { useAuth } from '@/src/auth/AuthContext';
+import {
+  getLocalProfilePhoto,
+  saveLocalProfilePhoto,
+} from '@/src/data/cache/localProfilePhoto';
 import { ThemeMode, useTheme } from '@/src/theme/ThemeContext';
+import { getLocalAnimeLists } from '@/src/data/cache/localAnimeLists';
+import {
+  getOrCreateProfileStats,
+  type ProfileStats,
+  readProfileStatsCache,
+  subscribeToProfileStats,
+} from '@/src/data/cache/localProfileStatsCache';
 
 const menuItems: {
   icon: keyof typeof Ionicons.glyphMap;
@@ -29,14 +54,148 @@ const menuItems: {
 
 export default function ProfileScreen() {
   const { colors, mode, setMode } = useTheme();
-  const { signOut } = useAuth();
+  const { authMode, localName, signOut } = useAuth();
+  const { width: screenWidth } = useWindowDimensions();
+  const isLocalAccount = authMode === 'local';
+  const displayName =
+    localName.trim() || (isLocalAccount ? 'Perfil local' : 'Conta oficial');
+  const avatarInitial = displayName.charAt(0).toUpperCase();
+  const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
+  const [isPhotoModalVisible, setIsPhotoModalVisible] = useState(false);
+  const [isChangingPhoto, setIsChangingPhoto] = useState(false);
+  const photoSize = Math.min(screenWidth - 48, 420);
+  const [profileStats, setProfileStats] = useState<ProfileStats | null>(() =>
+    readProfileStatsCache(localName),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      if (!isLocalAccount || !localName.trim()) {
+        setProfileStats(null);
+        setProfilePhotoUri(null);
+        return;
+      }
+
+      setProfileStats(readProfileStatsCache(localName));
+      const unsubscribeFromProfileStats = subscribeToProfileStats(
+        localName,
+        (stats) => {
+          if (isActive) setProfileStats(stats);
+        },
+      );
+      getOrCreateProfileStats(localName, async () => {
+        const localLists = await getLocalAnimeLists(localName);
+        return localLists.completed;
+      })
+        .then((stats) => {
+          if (isActive) setProfileStats(stats);
+        })
+        .catch((error: unknown) => {
+          if (isActive)
+            Alert.alert(
+              'Erro ao carregar estatísticas',
+              error instanceof Error
+                ? error.message
+                : 'Não foi possível calcular os dados do perfil.',
+            );
+        });
+      getLocalProfilePhoto(localName)
+        .then((photoUri) => {
+          if (isActive) setProfilePhotoUri(photoUri);
+        })
+        .catch((error: unknown) => {
+          if (isActive) {
+            Alert.alert(
+              'Erro ao carregar foto',
+              error instanceof Error
+                ? error.message
+                : 'Não foi possível carregar sua foto de perfil.',
+            );
+          }
+        });
+      return () => {
+        isActive = false;
+        unsubscribeFromProfileStats();
+      };
+    }, [isLocalAccount, localName]),
+  );
 
   const handleSignOut = async () => {
     await signOut();
-    router.replace('/(public)/login');
+    router.replace('/(public)');
   };
 
   const chooseTheme = (selectedMode: ThemeMode) => setMode(selectedMode);
+
+  const changeProfilePhoto = async () => {
+    setIsChangingPhoto(true);
+
+    try {
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        const permissionActions = permission.canAskAgain
+          ? [{ text: 'Entendi', style: 'cancel' as const }]
+          : [
+              {
+                text: 'Abrir configurações',
+                onPress: () => Linking.openSettings(),
+              },
+              { text: 'Cancelar', style: 'cancel' as const },
+            ];
+
+        Alert.alert(
+          'Acesso à galeria necessário',
+          'Permita o acesso às fotos para escolher uma imagem de perfil.',
+          permissionActions,
+        );
+        return;
+      }
+
+      const selection = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (selection.canceled || !selection.assets[0]) return;
+
+      const savedPhotoUri = await saveLocalProfilePhoto(
+        localName,
+        selection.assets[0].uri,
+      );
+      setProfilePhotoUri(savedPhotoUri);
+    } catch (error) {
+      Alert.alert(
+        'Não foi possível alterar a foto',
+        error instanceof Error
+          ? error.message
+          : 'Tente selecionar a imagem novamente.',
+      );
+    } finally {
+      setIsChangingPhoto(false);
+    }
+  };
+
+  const showProfilePhotoOptions = () => {
+    const actions = profilePhotoUri
+      ? [
+          {
+            text: 'Ver foto',
+            onPress: () => setIsPhotoModalVisible(true),
+          },
+          { text: 'Alterar foto', onPress: changeProfilePhoto },
+          { text: 'Cancelar', style: 'cancel' as const },
+        ]
+      : [
+          { text: 'Alterar foto', onPress: changeProfilePhoto },
+          { text: 'Cancelar', style: 'cancel' as const },
+        ];
+
+    Alert.alert('Foto de perfil', 'O que você deseja fazer?', actions);
+  };
 
   return (
     <Screen scroll style={styles.screen}>
@@ -47,21 +206,50 @@ export default function ProfileScreen() {
           { backgroundColor: colors.surface, borderColor: colors.border },
         ]}
       >
-        <View style={[styles.avatar, { backgroundColor: colors.accentSoft }]}>
-          <Text style={[styles.avatarText, { color: colors.accent }]}>M</Text>
-        </View>
-        <Text style={[styles.name, { color: colors.text }]}>
-          Matheus Oliveira
-        </Text>
+        <Pressable
+          onPress={showProfilePhotoOptions}
+          disabled={!isLocalAccount || isChangingPhoto}
+          accessibilityRole="button"
+          accessibilityLabel="Opções da foto de perfil"
+          style={({ pressed }) => [
+            styles.avatar,
+            { backgroundColor: colors.accentSoft, opacity: pressed ? 0.8 : 1 },
+          ]}
+        >
+          {isChangingPhoto ? (
+            <ActivityIndicator color={colors.accent} />
+          ) : profilePhotoUri ? (
+            <Image
+              source={{ uri: profilePhotoUri }}
+              style={styles.avatarImage}
+            />
+          ) : (
+            <Text style={[styles.avatarText, { color: colors.accent }]}>
+              {avatarInitial}
+            </Text>
+          )}
+          {isLocalAccount && (
+            <View
+              style={[styles.avatarEditBadge, { backgroundColor: colors.accent }]}
+            >
+              <Ionicons name="camera-outline" size={12} color="#FFFFFF" />
+            </View>
+          )}
+        </Pressable>
+        <Text style={[styles.name, { color: colors.text }]}>{displayName}</Text>
         <Text style={[styles.email, { color: colors.muted }]}>
-          matheus@email.com
+          {isLocalAccount ? 'Dados salvos neste aparelho' : 'Conta oficial'}
         </Text>
         <View
           style={[styles.memberBadge, { backgroundColor: colors.accentSoft }]}
         >
-          <Ionicons name="sparkles" size={12} color={colors.accent} />
+          <Ionicons
+            name="phone-portrait-outline"
+            size={12}
+            color={colors.accent}
+          />
           <Text style={[styles.memberText, { color: colors.accent }]}>
-            Membro desde 2024
+            {isLocalAccount ? 'Perfil local' : 'Conta oficial'}
           </Text>
         </View>
       </View>
@@ -73,10 +261,10 @@ export default function ProfileScreen() {
       >
         <View style={styles.collectionStat}>
           <Text style={[styles.collectionNumber, { color: colors.text }]}>
-            0
+            {profileStats?.completedAnimeCount ?? '—'}
           </Text>
           <Text style={[styles.collectionLabel, { color: colors.muted }]}>
-            animes salvos
+            animes concluídos
           </Text>
         </View>
         <View
@@ -84,7 +272,7 @@ export default function ProfileScreen() {
         />
         <View style={styles.collectionStat}>
           <Text style={[styles.collectionNumber, { color: colors.text }]}>
-            0
+            {profileStats?.completedEpisodeCount ?? '—'}
           </Text>
           <Text style={[styles.collectionLabel, { color: colors.muted }]}>
             total de episódios
@@ -95,7 +283,7 @@ export default function ProfileScreen() {
         />
         <View style={styles.collectionStat}>
           <Text style={[styles.collectionNumber, { color: colors.text }]}>
-            —
+            {profileStats?.watchedHours ?? '—'}
           </Text>
           <Text style={[styles.collectionLabel, { color: colors.muted }]}>
             horas assistidas
@@ -183,7 +371,7 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
       </View>
-      <Text style={[styles.sectionLabel, { color: colors.muted }]}>CONTA</Text>
+      <Text style={[styles.sectionLabel, { color: colors.muted }]}>SESSÃO</Text>
       <View
         style={[
           styles.settingsCard,
@@ -227,12 +415,36 @@ export default function ProfileScreen() {
       >
         <Ionicons name="log-out-outline" size={17} color={colors.muted} />
         <Text style={[styles.logoutText, { color: colors.muted }]}>
-          Sair da conta
+          Sair da sessão
         </Text>
       </Pressable>
       <Text style={[styles.version, { color: colors.muted }]}>
         ANIKEEPER · VERSÃO 1.0.0
       </Text>
+      <Modal
+        visible={isPhotoModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsPhotoModalVisible(false)}
+      >
+        <View style={styles.photoModalBackdrop}>
+          <Pressable
+            onPress={() => setIsPhotoModalVisible(false)}
+            style={styles.photoModalClose}
+            accessibilityRole="button"
+            accessibilityLabel="Fechar foto"
+          >
+            <Ionicons name="close" size={24} color="#FFFFFF" />
+          </Pressable>
+          {profilePhotoUri ? (
+            <Image
+              source={{ uri: profilePhotoUri }}
+              resizeMode="contain"
+              style={{ width: photoSize, height: photoSize, borderRadius: 20 }}
+            />
+          ) : null}
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -253,8 +465,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
+    overflow: 'visible',
+  },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 23 },
+  avatarEditBadge: {
+    position: 'absolute',
+    right: -4,
+    bottom: -4,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   avatarText: { fontSize: 25, fontWeight: '800' },
+  photoModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  photoModalClose: {
+    position: 'absolute',
+    top: 56,
+    right: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    zIndex: 1,
+  },
   name: { fontSize: 17, fontWeight: '700' },
   email: { fontSize: 12, marginTop: 5 },
   memberBadge: {

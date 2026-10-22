@@ -128,7 +128,7 @@ export default function AddAnimeScreen() {
       searchHistoryStorageKey,
       JSON.stringify(nextHistory),
     ).catch(() => undefined);
-    router.push({ pathname: '/(local)/anime/[id]', params: { id: anime.id } });
+    router.push({ pathname: '/(main)/anime/[id]', params: { id: anime.id } });
   };
 
   const clearHistory = async () => {

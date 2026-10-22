@@ -26,7 +26,7 @@ export default function MyListScreen() {
   const { colors } = useTheme();
   const { width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { localName } = useAuth();
+  const { authMode, localName } = useAuth();
   const [selectedList, setSelectedList] =
     useState<(typeof localAnimeListOptions)[number]['key']>('completed');
   const [animeLists, setAnimeLists] =
@@ -48,6 +48,11 @@ export default function MyListScreen() {
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
+      if (authMode !== 'local' || !localName.trim()) {
+        setAnimeLists(emptyLocalAnimeLists);
+        return;
+      }
+
       setAnimeLists(emptyLocalAnimeLists);
       getLocalAnimeLists(localName)
         .then((savedLists) => {
@@ -65,7 +70,7 @@ export default function MyListScreen() {
       return () => {
         isActive = false;
       };
-    }, [localName]),
+    }, [authMode, localName]),
   );
 
   return (
@@ -192,7 +197,7 @@ export default function MyListScreen() {
               key={anime.id}
               onPress={() =>
                 router.push({
-                  pathname: '/(local)/anime/[id]',
+                  pathname: '/(main)/anime/[id]',
                   params: { id: anime.id },
                 })
               }
