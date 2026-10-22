@@ -11,12 +11,14 @@ import {
 } from 'react-native';
 import { Screen } from '@/src/components/Screen';
 import { useAuth } from '@/src/auth/AuthContext';
+import { deleteAllLocalDeviceData } from '@/src/data/cache/localDeviceData';
 import { useTheme } from '@/src/theme/ThemeContext';
 
 export default function LocalLoginScreen() {
   const { colors } = useTheme();
   const { isReady, localName, signInLocal } = useAuth();
   const [name, setName] = useState(localName);
+  const [isDeletingData, setIsDeletingData] = useState(false);
 
   const continueLocally = async () => {
     const normalizedName = name.trim();
@@ -30,6 +32,40 @@ export default function LocalLoginScreen() {
 
     await signInLocal(normalizedName);
     router.replace('/(local)');
+  };
+
+  const deleteAllDeviceData = async () => {
+    setIsDeletingData(true);
+
+    try {
+      await deleteAllLocalDeviceData();
+      setName('');
+      Alert.alert('Dados excluídos', 'Todos os dados locais foram apagados.');
+    } catch (error: unknown) {
+      Alert.alert(
+        'Não foi possível excluir os dados',
+        error instanceof Error
+          ? error.message
+          : 'Tente novamente em alguns instantes.',
+      );
+    } finally {
+      setIsDeletingData(false);
+    }
+  };
+
+  const confirmDeleteAllDeviceData = () => {
+    Alert.alert(
+      'Excluir todos os dados?',
+      'Isso apagará permanentemente todas as listas, fotos e informações de todas as contas locais deste aparelho. Essa ação não pode ser desfeita.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir tudo',
+          style: 'destructive',
+          onPress: deleteAllDeviceData,
+        },
+      ],
+    );
   };
 
   return (
@@ -116,6 +152,18 @@ export default function LocalLoginScreen() {
           <Text style={styles.primaryText}>Continuar localmente</Text>
           <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
         </Pressable>
+
+        <Pressable
+          onPress={confirmDeleteAllDeviceData}
+          disabled={!isReady || isDeletingData}
+          style={styles.deleteDataButton}
+          accessibilityRole="button"
+          accessibilityLabel="Excluir todos os dados deste aparelho"
+        >
+          <Text style={[styles.deleteDataText, { color: '#D64545' }]}>
+            {isDeletingData ? 'Excluindo dados…' : 'Excluir todos os dados'}
+          </Text>
+        </Pressable>
       </View>
 
       <View style={styles.footer}>
@@ -192,6 +240,13 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   primaryText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  deleteDataButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    marginTop: 4,
+  },
+  deleteDataText: { fontSize: 12, fontWeight: '600' },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
