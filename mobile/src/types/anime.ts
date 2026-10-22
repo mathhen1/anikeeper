@@ -7,6 +7,7 @@ export type AnimeInfo = {
   type: 'Série' | 'Filme';
   year: number;
   episodes: number;
+  episodeLength?: number | null;
   rating: string;
   studio: string;
   synopsis: string;

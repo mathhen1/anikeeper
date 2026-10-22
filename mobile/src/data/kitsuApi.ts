@@ -16,6 +16,7 @@ type KitsuAnime = {
     canonicalTitle?: string | null;
     subtype?: string | null;
     episodeCount?: number | null;
+    episodeLength?: number | null;
     averageRating?: string | null;
     startDate?: string | null;
     posterImage?: {
@@ -44,6 +45,7 @@ function toAnimeInfo(anime: KitsuAnime): AnimeInfo {
     type: attributes.subtype?.toLowerCase() === 'movie' ? 'Filme' : 'Série',
     year: attributes.startDate ? new Date(attributes.startDate).getFullYear() : 0,
     episodes: attributes.episodeCount ?? 0,
+    episodeLength: attributes.episodeLength ?? null,
     rating: score && Number.isFinite(score) ? score.toFixed(1) : '—',
     studio: 'Desconhecido',
     synopsis: attributes.synopsis || 'Sinopse indisponível.',
