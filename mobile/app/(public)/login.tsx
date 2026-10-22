@@ -29,7 +29,7 @@ export default function LoginScreen() {
         'Informe seu e-mail e sua senha para continuar.',
       );
     await signInOfficial(email.trim());
-    router.replace('/(app)');
+    router.replace('/(main)');
   };
 
   return (

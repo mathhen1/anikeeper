@@ -27,7 +27,7 @@ export default function RegisterScreen() {
         'Preencha todos os campos e use uma senha com pelo menos 6 caracteres.',
       );
     await signInOfficial(email.trim());
-    router.replace('/(app)');
+    router.replace('/(main)');
   };
 
   return (

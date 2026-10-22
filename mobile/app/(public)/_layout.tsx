@@ -4,7 +4,7 @@ import { useAuth } from '@/src/auth/AuthContext';
 import { useTheme } from '@/src/theme/ThemeContext';
 
 export default function PublicLayout() {
-  const { authMode, isAuthenticated, isReady } = useAuth();
+  const { isAuthenticated, isReady } = useAuth();
   const { colors } = useTheme();
 
   if (!isReady) {
@@ -23,7 +23,7 @@ export default function PublicLayout() {
   }
 
   if (isAuthenticated) {
-    return <Redirect href={authMode === 'local' ? '/(local)' : '/(app)'} />;
+    return <Redirect href="/(main)" />;
   }
   return <Stack screenOptions={{ headerShown: false }} />;
 }

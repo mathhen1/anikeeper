@@ -31,7 +31,7 @@ export default function LocalLoginScreen() {
     }
 
     await signInLocal(normalizedName);
-    router.replace('/(local)');
+    router.replace('/(main)');
   };
 
   const deleteAllDeviceData = async () => {

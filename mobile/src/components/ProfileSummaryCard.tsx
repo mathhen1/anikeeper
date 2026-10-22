@@ -122,7 +122,7 @@ export function ProfileSummaryCard({
           </Text>
         </View>
         <Pressable
-          onPress={() => router.push('/(local)/profile')}
+          onPress={() => router.push('/(main)/profile')}
           style={({ pressed }) => [
             styles.avatar,
             {
