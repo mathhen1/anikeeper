@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 import { AnimeInfo } from '@/src/types/anime';
 import { useTheme } from '@/src/theme/ThemeContext';
@@ -52,35 +53,53 @@ export function ProfileSummaryCard({
           {description}
         </Text>
       </View>
-      <View style={styles.statsRow}>
-        <View style={styles.stat}>
-          <Text style={[styles.statNumber, { color: colors.text }]}>
-            {completedAnimeCount}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.muted }]}>
-            animes concluídos
-          </Text>
+      <View style={styles.statsSection}>
+        <Text style={[styles.statsHeading, { color: colors.text }]}>
+          Informações do Perfil:
+        </Text>
+        <View style={styles.statsRow}>
+          <View style={styles.stat}>
+            <Text style={[styles.statNumber, { color: colors.text }]}>
+              {completedAnimeCount}
+            </Text>
+            <Text style={[styles.statLabel, { color: colors.muted }]}>
+              animes concluídos
+            </Text>
+          </View>
+          <View
+            style={[styles.statDivider, { backgroundColor: colors.border }]}
+          />
+          <View style={styles.stat}>
+            <Text style={[styles.statNumber, { color: colors.text }]}>
+              {completedEpisodeCount}
+            </Text>
+            <Text style={[styles.statLabel, { color: colors.muted }]}>
+              total de episódios
+            </Text>
+          </View>
+          <View
+            style={[styles.statDivider, { backgroundColor: colors.border }]}
+          />
+          <View style={styles.stat}>
+            <Text style={[styles.statNumber, { color: colors.text }]}>
+              {watchedHours}
+            </Text>
+            <Text style={[styles.statLabel, { color: colors.muted }]}>
+              horas assistidas
+            </Text>
+          </View>
         </View>
         <View
-          style={[styles.statDivider, { backgroundColor: colors.border }]}
-        />
-        <View style={styles.stat}>
-          <Text style={[styles.statNumber, { color: colors.text }]}>
-            {completedEpisodeCount}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.muted }]}>
-            total de episódios
-          </Text>
-        </View>
-        <View
-          style={[styles.statDivider, { backgroundColor: colors.border }]}
-        />
-        <View style={styles.stat}>
-          <Text style={[styles.statNumber, { color: colors.text }]}>
-            {watchedHours}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.muted }]}>
-            horas assistidas
+          style={[styles.estimateNote, { backgroundColor: colors.elevated }]}
+        >
+          <Ionicons
+            name="information-circle-outline"
+            size={16}
+            color={colors.accent}
+          />
+          <Text style={[styles.estimateText, { color: colors.muted }]}>
+            Cálculo aproximado: alguns animes podem não ter episódios ou
+            duração informados.
           </Text>
         </View>
       </View>
@@ -92,14 +111,24 @@ const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: 19, padding: 17 },
   eyebrow: { fontSize: 9, fontWeight: '700', letterSpacing: 1.2 },
   title: { fontSize: 14, fontWeight: '700', marginTop: 5 },
+  statsSection: { marginTop: 16, gap: 11 },
+  statsHeading: { fontSize: 11, fontWeight: '700' },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginTop: 17,
   },
   stat: { flex: 1, gap: 3 },
   statNumber: { fontSize: 18, fontWeight: '800' },
   statLabel: { fontSize: 10 },
   statDivider: { width: 1, height: 30 },
+  estimateNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    borderRadius: 11,
+  },
+  estimateText: { flex: 1, fontSize: 10, lineHeight: 15 },
 });
