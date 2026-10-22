@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { Screen } from '@/src/components/Screen';
 import { useAuth } from '@/src/auth/AuthContext';
 import { ThemeMode, useTheme } from '@/src/theme/ThemeContext';
+import { emptyLocalAnimeLists, getLocalAnimeLists, LocalAnimeLists } from '@/src/data/localAnimeLists';
 
 const menuItems: { icon: keyof typeof Ionicons.glyphMap; title: string; detail: string }[] = [
   { icon: 'notifications-outline', title: 'Notificações', detail: 'Lembretes e novidades' },
@@ -16,6 +18,18 @@ export default function ProfileScreen() {
   const { localName, signOut } = useAuth();
   const displayName = localName.trim() || 'Perfil local';
   const avatarInitial = displayName.charAt(0).toUpperCase();
+  const [animeLists, setAnimeLists] = useState<LocalAnimeLists>(emptyLocalAnimeLists);
+  const savedAnimeCount = animeLists.completed.length + animeLists.watching.length + animeLists.planned.length;
+
+  useFocusEffect(useCallback(() => {
+    let isActive = true;
+    getLocalAnimeLists().then((lists) => {
+      if (isActive) setAnimeLists(lists);
+    }).catch((error: unknown) => {
+      if (isActive) Alert.alert('Erro ao carregar listas', error instanceof Error ? error.message : 'Não foi possível ler seus animes salvos.');
+    });
+    return () => { isActive = false; };
+  }, []));
 
   const handleSignOut = async () => {
     await signOut();
@@ -34,7 +48,7 @@ export default function ProfileScreen() {
         <View style={[styles.memberBadge, { backgroundColor: colors.accentSoft }]}><Ionicons name="phone-portrait-outline" size={12} color={colors.accent} /><Text style={[styles.memberText, { color: colors.accent }]}>Perfil local</Text></View>
       </View>
       <View style={[styles.collectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <View style={styles.collectionStat}><Text style={[styles.collectionNumber, { color: colors.text }]}>0</Text><Text style={[styles.collectionLabel, { color: colors.muted }]}>animes salvos</Text></View>
+        <View style={styles.collectionStat}><Text style={[styles.collectionNumber, { color: colors.text }]}>{savedAnimeCount}</Text><Text style={[styles.collectionLabel, { color: colors.muted }]}>animes salvos</Text></View>
         <View style={[styles.verticalDivider, { backgroundColor: colors.border }]} />
         <View style={styles.collectionStat}><Text style={[styles.collectionNumber, { color: colors.text }]}>0</Text><Text style={[styles.collectionLabel, { color: colors.muted }]}>total de episódios</Text></View>
         <View style={[styles.verticalDivider, { backgroundColor: colors.border }]} />
