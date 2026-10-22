@@ -1,5 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, PropsWithChildren, useContext, useEffect, useState } from 'react';
+import {
+  createContext,
+  PropsWithChildren,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 
 export type AuthMode = 'official' | 'local' | null;
 
@@ -26,24 +32,29 @@ export function AuthProvider({ children }: PropsWithChildren) {
       AsyncStorage.getItem('anikeeper-auth'),
       AsyncStorage.getItem('anikeeper-auth-mode'),
       AsyncStorage.getItem('anikeeper-local-name'),
-    ]).then(([savedAuth, savedMode, savedLocalName]) => {
-      const hasSession = savedAuth === 'true';
-      let mode: AuthMode = null;
-      if (savedMode === 'local') {
-        mode = 'local';
-      } else if (savedMode === 'official' || hasSession) {
-        mode = 'official';
-      }
+    ])
+      .then(([savedAuth, savedMode, savedLocalName]) => {
+        const hasSession = savedAuth === 'true';
+        let mode: AuthMode = null;
+        if (savedMode === 'local') {
+          mode = 'local';
+        } else if (savedMode === 'official' || hasSession) {
+          mode = 'official';
+        }
 
-      setIsAuthenticated(hasSession);
-      setAuthMode(mode);
-      setLocalName(savedLocalName ?? '');
+        setIsAuthenticated(hasSession);
+        setAuthMode(mode);
+        setLocalName(savedLocalName ?? '');
 
-      // Existing prototype sessions had no mode. Keep them on the official route.
-      if (hasSession && savedMode !== 'local' && savedMode !== 'official') {
-        AsyncStorage.setItem('anikeeper-auth-mode', 'official').catch(() => undefined);
-      }
-    }).catch(() => undefined).finally(() => setIsReady(true));
+        // Existing prototype sessions had no mode. Keep them on the official route.
+        if (hasSession && savedMode !== 'local' && savedMode !== 'official') {
+          AsyncStorage.setItem('anikeeper-auth-mode', 'official').catch(
+            () => undefined,
+          );
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => setIsReady(true));
   }, []);
 
   const signInOfficial = async (email: string) => {
@@ -71,11 +82,26 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setAuthMode(null);
   };
 
-  return <AuthContext.Provider value={{ authMode, isAuthenticated, isReady, localName, signInOfficial, signInLocal, signOut }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        authMode,
+        isAuthenticated,
+        isReady,
+        localName,
+        signInOfficial,
+        signInLocal,
+        signOut,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth precisa ser usado dentro de AuthProvider.');
+  if (!context)
+    throw new Error('useAuth precisa ser usado dentro de AuthProvider.');
   return context;
 }

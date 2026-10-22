@@ -34,16 +34,22 @@ type KitsuSearchResponse = {
 
 function toAnimeInfo(anime: KitsuAnime): AnimeInfo {
   const attributes = anime.attributes;
-  const title = attributes.titles?.en || attributes.canonicalTitle || 'Título indisponível';
-  const originalTitle = attributes.titles?.ja_jp || attributes.titles?.en_jp || title;
-  const score = attributes.averageRating ? Number(attributes.averageRating) / 10 : null;
+  const title =
+    attributes.titles?.en || attributes.canonicalTitle || 'Título indisponível';
+  const originalTitle =
+    attributes.titles?.ja_jp || attributes.titles?.en_jp || title;
+  const score = attributes.averageRating
+    ? Number(attributes.averageRating) / 10
+    : null;
 
   return {
     id: anime.id,
     title,
     originalTitle,
     type: attributes.subtype?.toLowerCase() === 'movie' ? 'Filme' : 'Série',
-    year: attributes.startDate ? new Date(attributes.startDate).getFullYear() : 0,
+    year: attributes.startDate
+      ? new Date(attributes.startDate).getFullYear()
+      : 0,
     episodes: attributes.episodeCount ?? 0,
     episodeLength: attributes.episodeLength ?? null,
     rating: score && Number.isFinite(score) ? score.toFixed(1) : '—',
@@ -52,7 +58,11 @@ function toAnimeInfo(anime: KitsuAnime): AnimeInfo {
     genres: [],
     colors: ['#4E5368', '#B59AF7'],
     icon: 'sparkles-outline',
-    imageUrl: attributes.posterImage?.original ?? attributes.posterImage?.large ?? attributes.posterImage?.small ?? null,
+    imageUrl:
+      attributes.posterImage?.original ??
+      attributes.posterImage?.large ??
+      attributes.posterImage?.small ??
+      null,
   };
 }
 
@@ -73,20 +83,28 @@ async function requestKitsu<T>(path: string, signal: AbortSignal): Promise<T> {
 
     if (!response.ok) {
       if (response.status === 429) {
-        throw new Error('Muitas buscas em sequência. Aguarde um instante e tente novamente.');
+        throw new Error(
+          'Muitas buscas em sequência. Aguarde um instante e tente novamente.',
+        );
       }
 
-      throw new Error(`A Kitsu respondeu com erro (${response.status}). Tente novamente em instantes.`);
+      throw new Error(
+        `A Kitsu respondeu com erro (${response.status}). Tente novamente em instantes.`,
+      );
     }
 
-    return await response.json() as T;
+    return (await response.json()) as T;
   } catch (error) {
     if (signal.aborted) throw error;
     if (requestController.signal.aborted) {
-      throw new Error('A API demorou para responder. Verifique sua conexão e tente novamente.');
+      throw new Error(
+        'A API demorou para responder. Verifique sua conexão e tente novamente.',
+      );
     }
     if (error instanceof TypeError) {
-      throw new Error('Não foi possível conectar à Kitsu. Verifique sua conexão com a internet.');
+      throw new Error(
+        'Não foi possível conectar à Kitsu. Verifique sua conexão com a internet.',
+      );
     }
 
     throw error;
@@ -110,21 +128,32 @@ export async function searchAnime(
     searchParams.set('filter[subtype]', type === 'tv' ? 'TV' : 'movie');
   }
 
-  const response = await requestKitsu<KitsuSearchResponse>(`/anime?${searchParams.toString()}`, signal);
+  const response = await requestKitsu<KitsuSearchResponse>(
+    `/anime?${searchParams.toString()}`,
+    signal,
+  );
   return response.data.map(toAnimeInfo);
 }
 
-async function getTopAnime(sort: string, signal: AbortSignal): Promise<AnimeInfo[]> {
+async function getTopAnime(
+  sort: string,
+  signal: AbortSignal,
+): Promise<AnimeInfo[]> {
   const searchParams = new URLSearchParams({
     sort,
     'page[limit]': '8',
   });
 
-  const response = await requestKitsu<KitsuSearchResponse>(`/anime?${searchParams.toString()}`, signal);
+  const response = await requestKitsu<KitsuSearchResponse>(
+    `/anime?${searchParams.toString()}`,
+    signal,
+  );
   return response.data.map(toAnimeInfo);
 }
 
-export function getMostFavoritedAnime(signal: AbortSignal): Promise<AnimeInfo[]> {
+export function getMostFavoritedAnime(
+  signal: AbortSignal,
+): Promise<AnimeInfo[]> {
   return getTopAnime('-favoritesCount', signal);
 }
 
@@ -136,7 +165,13 @@ export function getMostPopularAnime(signal: AbortSignal): Promise<AnimeInfo[]> {
   return getTopAnime('popularityRank', signal);
 }
 
-export async function getAnimeById(id: string, signal: AbortSignal): Promise<AnimeInfo> {
-  const response = await requestKitsu<{ data: KitsuAnime }>(`/anime/${encodeURIComponent(id)}`, signal);
+export async function getAnimeById(
+  id: string,
+  signal: AbortSignal,
+): Promise<AnimeInfo> {
+  const response = await requestKitsu<{ data: KitsuAnime }>(
+    `/anime/${encodeURIComponent(id)}`,
+    signal,
+  );
   return toAnimeInfo(response.data);
 }
