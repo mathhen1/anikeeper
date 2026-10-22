@@ -20,13 +20,15 @@ import { useAuth } from '@/src/auth/AuthContext';
 import {
   getLocalProfilePhoto,
   saveLocalProfilePhoto,
-} from '@/src/data/localProfilePhoto';
+} from '@/src/data/cache/localProfilePhoto';
 import { ThemeMode, useTheme } from '@/src/theme/ThemeContext';
+import { getLocalAnimeLists } from '@/src/data/cache/localAnimeLists';
 import {
-  emptyLocalAnimeLists,
-  getLocalAnimeLists,
-  LocalAnimeLists,
-} from '@/src/data/localAnimeLists';
+  getOrCreateProfileStats,
+  type ProfileStats,
+  readProfileStatsCache,
+  subscribeToProfileStats,
+} from '@/src/data/cache/localProfileStatsCache';
 
 const menuItems: {
   icon: keyof typeof Ionicons.glyphMap;
@@ -60,28 +62,34 @@ export default function ProfileScreen() {
   const [isPhotoModalVisible, setIsPhotoModalVisible] = useState(false);
   const [isChangingPhoto, setIsChangingPhoto] = useState(false);
   const photoSize = Math.min(screenWidth - 48, 420);
-  const [animeLists, setAnimeLists] =
-    useState<LocalAnimeLists>(emptyLocalAnimeLists);
-  const savedAnimeCount =
-    animeLists.completed.length +
-    animeLists.watching.length +
-    animeLists.planned.length;
+  const [profileStats, setProfileStats] = useState<ProfileStats | null>(() =>
+    readProfileStatsCache(localName),
+  );
 
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
-      setAnimeLists(emptyLocalAnimeLists);
-      getLocalAnimeLists(localName)
-        .then((lists) => {
-          if (isActive) setAnimeLists(lists);
+      setProfileStats(readProfileStatsCache(localName));
+      const unsubscribeFromProfileStats = subscribeToProfileStats(
+        localName,
+        (stats) => {
+          if (isActive) setProfileStats(stats);
+        },
+      );
+      getOrCreateProfileStats(localName, async () => {
+        const localLists = await getLocalAnimeLists(localName);
+        return localLists.completed;
+      })
+        .then((stats) => {
+          if (isActive) setProfileStats(stats);
         })
         .catch((error: unknown) => {
           if (isActive)
             Alert.alert(
-              'Erro ao carregar listas',
+              'Erro ao carregar estatísticas',
               error instanceof Error
                 ? error.message
-                : 'Não foi possível ler seus animes salvos.',
+                : 'Não foi possível calcular os dados do perfil.',
             );
         });
       getLocalProfilePhoto(localName)
@@ -100,6 +108,7 @@ export default function ProfileScreen() {
         });
       return () => {
         isActive = false;
+        unsubscribeFromProfileStats();
       };
     }, [localName]),
   );
@@ -242,10 +251,10 @@ export default function ProfileScreen() {
       >
         <View style={styles.collectionStat}>
           <Text style={[styles.collectionNumber, { color: colors.text }]}>
-            {savedAnimeCount}
+            {profileStats?.completedAnimeCount ?? '—'}
           </Text>
           <Text style={[styles.collectionLabel, { color: colors.muted }]}>
-            animes salvos
+            animes concluídos
           </Text>
         </View>
         <View
@@ -253,7 +262,7 @@ export default function ProfileScreen() {
         />
         <View style={styles.collectionStat}>
           <Text style={[styles.collectionNumber, { color: colors.text }]}>
-            0
+            {profileStats?.completedEpisodeCount ?? '—'}
           </Text>
           <Text style={[styles.collectionLabel, { color: colors.muted }]}>
             total de episódios
@@ -264,7 +273,7 @@ export default function ProfileScreen() {
         />
         <View style={styles.collectionStat}>
           <Text style={[styles.collectionNumber, { color: colors.text }]}>
-            —
+            {profileStats?.watchedHours ?? '—'}
           </Text>
           <Text style={[styles.collectionLabel, { color: colors.muted }]}>
             horas assistidas
