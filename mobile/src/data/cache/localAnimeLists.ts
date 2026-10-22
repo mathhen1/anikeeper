@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AnimeInfo } from '@/src/types/anime';
-import { updateLocalAnimeListCountsCache } from '@/src/data/localAnimeListCountsCache';
-import { updateProfileStatsCache } from '@/src/data/profileStatsCache';
+import { updateLocalAnimeListCountsCache } from '@/src/data/cache/localAnimeListCountsCache';
+import { updateProfileStatsCache } from '@/src/data/cache/localProfileStatsCache';
 
 export const localAnimeListOptions = [
   {
