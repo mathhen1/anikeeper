@@ -1,14 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { AnimeInfo } from '@/src/data/animeCatalog';
 
 type AnimeArtworkProps = {
-  anime: Pick<AnimeInfo, 'colors' | 'icon'>;
+  anime: Pick<AnimeInfo, 'colors' | 'icon' | 'imageUrl'>;
   width: number;
   height: number;
 };
 
 export function AnimeArtwork({ anime, width, height }: AnimeArtworkProps) {
+  if (anime.imageUrl) {
+    return <Image source={{ uri: anime.imageUrl }} style={[styles.poster, { width, height }]} resizeMode="cover" />;
+  }
+
   return (
     <View style={[styles.poster, { width, height, backgroundColor: anime.colors[0] }]}>
       <View style={[styles.largeShape, { backgroundColor: anime.colors[1], width: width * 0.72, height: height * 0.72 }]} />

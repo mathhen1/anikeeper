@@ -13,6 +13,7 @@ export type AnimeInfo = {
   genres: string[];
   colors: [string, string];
   icon: keyof typeof Ionicons.glyphMap;
+  imageUrl?: string | null;
 };
 
 export const animeCatalog: AnimeInfo[] = [
