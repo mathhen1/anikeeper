@@ -1,4 +1,4 @@
-import { AnimeInfo } from '@/src/data/animeCatalog';
+import { AnimeInfo } from '@/src/types/anime';
 
 const apiBaseUrl = 'https://kitsu.io/api/edge';
 const requestTimeoutMs = 15_000;
@@ -112,14 +112,26 @@ export async function searchAnime(
   return response.data.map(toAnimeInfo);
 }
 
-export async function getRecommendedAnime(signal: AbortSignal): Promise<AnimeInfo[]> {
+async function getTopAnime(sort: string, signal: AbortSignal): Promise<AnimeInfo[]> {
   const searchParams = new URLSearchParams({
-    sort: '-averageRating',
+    sort,
     'page[limit]': '8',
   });
 
   const response = await requestKitsu<KitsuSearchResponse>(`/anime?${searchParams.toString()}`, signal);
   return response.data.map(toAnimeInfo);
+}
+
+export function getMostFavoritedAnime(signal: AbortSignal): Promise<AnimeInfo[]> {
+  return getTopAnime('-favoritesCount', signal);
+}
+
+export function getTopRatedAnime(signal: AbortSignal): Promise<AnimeInfo[]> {
+  return getTopAnime('-averageRating', signal);
+}
+
+export function getMostPopularAnime(signal: AbortSignal): Promise<AnimeInfo[]> {
+  return getTopAnime('popularityRank', signal);
 }
 
 export async function getAnimeById(id: string, signal: AbortSignal): Promise<AnimeInfo> {

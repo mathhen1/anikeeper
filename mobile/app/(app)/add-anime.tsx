@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AnimeArtwork } from '@/src/components/AnimeArtwork';
 import { Screen } from '@/src/components/Screen';
-import { animeCatalog, AnimeInfo } from '@/src/data/animeCatalog';
+import { AnimeInfo } from '@/src/types/anime';
 import { AnimeTypeFilter, searchAnime } from '@/src/data/kitsuApi';
 import { useTheme } from '@/src/theme/ThemeContext';
 
@@ -61,14 +61,7 @@ export default function AddAnimeScreen() {
         const storedHistory: unknown = JSON.parse(storedHistoryJson);
         if (!Array.isArray(storedHistory)) return;
 
-        const restoredHistory = storedHistory.flatMap((entry): AnimeInfo[] => {
-          if (typeof entry === 'string') {
-            const savedAnime = animeCatalog.find((anime) => anime.id === entry);
-            return savedAnime ? [savedAnime] : [];
-          }
-
-          return isAnimeInfo(entry) ? [entry] : [];
-        });
+        const restoredHistory = storedHistory.filter(isAnimeInfo).slice(0, 6);
         setHistory(restoredHistory);
       })
       .catch(() => setHistory([]));

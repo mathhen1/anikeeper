@@ -2,11 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { AnimeCard } from '@/src/components/AnimeCard';
 import { AnimeArtwork } from '@/src/components/AnimeArtwork';
 import { Screen } from '@/src/components/Screen';
-import { AnimeInfo } from '@/src/data/animeCatalog';
-import { getRecommendedAnime } from '@/src/data/kitsuApi';
+import { AnimeInfo } from '@/src/types/anime';
+import { getMostFavoritedAnime, getMostPopularAnime, getTopRatedAnime } from '@/src/data/kitsuApi';
 import { useTheme } from '@/src/theme/ThemeContext';
 
 const collectionLists = [
@@ -15,33 +14,103 @@ const collectionLists = [
   { label: 'Concluídos', count: 28, icon: 'checkmark-circle-outline' as const, color: '#8DD6B1' },
 ];
 
-const currentAnime = {
-  id: 'frieren',
-  title: 'Frieren: Beyond Journey’s End',
-  detail: 'Temporada 1 · Ep. 18 de 28',
-  rating: '9.4',
-  colors: ['#65746B', '#D4AF72'] as [string, string],
-  icon: 'leaf-outline' as const,
+
+type AnimeRecommendationState = {
+  items: AnimeInfo[];
+  isLoading: boolean;
+  error: string;
 };
+
+function AnimeRecommendationSection({
+  title,
+  subtitle,
+  icon,
+  recommendation,
+}: {
+  title: string;
+  subtitle: string;
+  icon: 'heart-outline' | 'star-outline' | 'trending-up-outline';
+  recommendation: AnimeRecommendationState;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <>
+      <View style={styles.sectionHeader}>
+        <View>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.muted }]}>{subtitle}</Text>
+        </View>
+        <Ionicons name={icon} size={18} color={colors.accent} />
+      </View>
+
+      {recommendation.isLoading ? (
+        <View style={[styles.recommendationsStatus, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <ActivityIndicator color={colors.accent} />
+          <Text style={[styles.recommendationsStatusText, { color: colors.muted }]}>Carregando animes...</Text>
+        </View>
+      ) : recommendation.error ? (
+        <View style={[styles.recommendationsStatus, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Ionicons name="cloud-offline-outline" size={19} color={colors.muted} />
+          <Text style={[styles.recommendationsStatusText, { color: colors.muted }]}>{recommendation.error}</Text>
+        </View>
+      ) : recommendation.items.length === 0 ? (
+        <View style={[styles.recommendationsStatus, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.recommendationsStatusText, { color: colors.muted }]}>Nenhum anime disponível agora.</Text>
+        </View>
+      ) : (
+        <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={styles.recommendationsRow}>
+          {recommendation.items.map((anime) => (
+            <Pressable
+              key={anime.id}
+              onPress={() => router.push({ pathname: '/(app)/anime/[id]', params: { id: anime.id } })}
+              style={styles.recommendationCard}
+              accessibilityRole="button"
+              accessibilityLabel={`Abrir ${anime.title}, nota ${anime.rating}`}
+            >
+              <AnimeArtwork anime={anime} width={108} height={142} />
+              <Text numberOfLines={2} style={[styles.recommendationTitle, { color: colors.text }]}>{anime.title}</Text>
+              <View style={styles.recommendationRating}>
+                <Ionicons name="star" size={12} color="#F1C66A" />
+                <Text style={[styles.recommendationRatingText, { color: colors.muted }]}>{anime.rating}</Text>
+              </View>
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
+    </>
+  );
+}
 
 export default function HomeScreen() {
   const { colors } = useTheme();
   const [query, setQuery] = useState('');
-  const [recommendedAnime, setRecommendedAnime] = useState<AnimeInfo[]>([]);
-  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
-  const [recommendationsError, setRecommendationsError] = useState('');
+  const [mostFavorited, setMostFavorited] = useState<AnimeRecommendationState>({ items: [], isLoading: true, error: '' });
+  const [topRated, setTopRated] = useState<AnimeRecommendationState>({ items: [], isLoading: true, error: '' });
+  const [mostPopular, setMostPopular] = useState<AnimeRecommendationState>({ items: [], isLoading: true, error: '' });
 
   useEffect(() => {
     const controller = new AbortController();
 
-    getRecommendedAnime(controller.signal)
-      .then(setRecommendedAnime)
+    getMostFavoritedAnime(controller.signal)
+      .then((items) => setMostFavorited({ items, isLoading: false, error: '' }))
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
-        setRecommendationsError(error instanceof Error ? error.message : 'Não foi possível carregar as recomendações.');
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setIsLoadingRecommendations(false);
+        setMostFavorited({ items: [], isLoading: false, error: error instanceof Error ? error.message : 'Não foi possível carregar os favoritos.' });
+      });
+
+    getTopRatedAnime(controller.signal)
+      .then((items) => setTopRated({ items, isLoading: false, error: '' }))
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setTopRated({ items: [], isLoading: false, error: error instanceof Error ? error.message : 'Não foi possível carregar os mais bem avaliados.' });
+      });
+
+    getMostPopularAnime(controller.signal)
+      .then((items) => setMostPopular({ items, isLoading: false, error: '' }))
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setMostPopular({ items: [], isLoading: false, error: error instanceof Error ? error.message : 'Não foi possível carregar os populares.' });
       });
 
     return () => controller.abort();
@@ -121,57 +190,25 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      <View style={styles.sectionHeader}>
-        <View>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Continue assistindo</Text>
-          <Text style={[styles.sectionSubtitle, { color: colors.muted }]}>Retome de onde você parou</Text>
-        </View>
-        <Ionicons name="ellipsis-horizontal" size={19} color={colors.muted} />
-      </View>
-      <AnimeCard anime={currentAnime} onPress={() => router.push({ pathname: '/(app)/anime/[id]', params: { id: currentAnime.id } })} />
 
-      <View style={styles.sectionHeader}>
-        <View>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Mais bem avaliados</Text>
-          <Text style={[styles.sectionSubtitle, { color: colors.muted }]}>Sugestões para sua próxima maratona</Text>
-        </View>
-        <Ionicons name="sparkles-outline" size={18} color={colors.accent} />
-      </View>
-
-      {isLoadingRecommendations ? (
-        <View style={[styles.recommendationsStatus, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <ActivityIndicator color={colors.accent} />
-          <Text style={[styles.recommendationsStatusText, { color: colors.muted }]}>Carregando recomendações...</Text>
-        </View>
-      ) : recommendationsError ? (
-        <View style={[styles.recommendationsStatus, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Ionicons name="cloud-offline-outline" size={19} color={colors.muted} />
-          <Text style={[styles.recommendationsStatusText, { color: colors.muted }]}>{recommendationsError}</Text>
-        </View>
-      ) : recommendedAnime.length === 0 ? (
-        <View style={[styles.recommendationsStatus, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.recommendationsStatusText, { color: colors.muted }]}>Nenhuma sugestão disponível agora.</Text>
-        </View>
-      ) : (
-        <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={styles.recommendationsRow}>
-          {recommendedAnime.map((anime) => (
-            <Pressable
-              key={anime.id}
-              onPress={() => router.push({ pathname: '/(app)/anime/[id]', params: { id: anime.id } })}
-              style={styles.recommendationCard}
-              accessibilityRole="button"
-              accessibilityLabel={`Abrir ${anime.title}, nota ${anime.rating}`}
-            >
-              <AnimeArtwork anime={anime} width={108} height={142} />
-              <Text numberOfLines={2} style={[styles.recommendationTitle, { color: colors.text }]}>{anime.title}</Text>
-              <View style={styles.recommendationRating}>
-                <Ionicons name="star" size={12} color="#F1C66A" />
-                <Text style={[styles.recommendationRatingText, { color: colors.muted }]}>{anime.rating}</Text>
-              </View>
-            </Pressable>
-          ))}
-        </ScrollView>
-      )}
+      <AnimeRecommendationSection
+        title="Favoritos da galera"
+        subtitle="Os mais favoritados na Kitsu"
+        icon="heart-outline"
+        recommendation={mostFavorited}
+      />
+      <AnimeRecommendationSection
+        title="Mais bem avaliados"
+        subtitle="As maiores notas na Kitsu"
+        icon="star-outline"
+        recommendation={topRated}
+      />
+      <AnimeRecommendationSection
+        title="Mais populares"
+        subtitle="Os animes mais acompanhados"
+        icon="trending-up-outline"
+        recommendation={mostPopular}
+      />
       <View style={{ height: 18 }} />
     </Screen>
   );

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AnimeArtwork } from '@/src/components/AnimeArtwork';
 import { Screen } from '@/src/components/Screen';
-import { AnimeInfo, findAnimeById } from '@/src/data/animeCatalog';
+import { AnimeInfo } from '@/src/types/anime';
 import { getAnimeById } from '@/src/data/kitsuApi';
 import { useTheme } from '@/src/theme/ThemeContext';
 
@@ -17,7 +17,6 @@ const listOptions = [
 export default function AnimeDetailScreen() {
   const params = useLocalSearchParams<{ id: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
-  const localAnime = findAnimeById(id);
   const { colors } = useTheme();
   const [isListMenuOpen, setIsListMenuOpen] = useState(false);
   const [selectedList, setSelectedList] = useState<string | null>(null);
@@ -26,7 +25,7 @@ export default function AnimeDetailScreen() {
   const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
-    if (!id || localAnime) {
+    if (!id) {
       setRemoteAnime(null);
       setIsLoading(false);
       setLoadError('');
@@ -49,9 +48,9 @@ export default function AnimeDetailScreen() {
       });
 
     return () => controller.abort();
-  }, [id, localAnime]);
+  }, [id]);
 
-  const anime = localAnime ?? remoteAnime;
+  const anime = remoteAnime;
 
   if (!anime && isLoading) {
     return <Screen style={styles.notFound}><ActivityIndicator color={colors.accent} /></Screen>;

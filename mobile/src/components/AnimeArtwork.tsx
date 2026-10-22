@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image, StyleSheet, View } from 'react-native';
-import { AnimeInfo } from '@/src/data/animeCatalog';
+import { AnimeInfo } from '@/src/types/anime';
 
 type AnimeArtworkProps = {
   anime: Pick<AnimeInfo, 'colors' | 'icon' | 'imageUrl'>;
