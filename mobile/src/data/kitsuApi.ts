@@ -112,6 +112,16 @@ export async function searchAnime(
   return response.data.map(toAnimeInfo);
 }
 
+export async function getRecommendedAnime(signal: AbortSignal): Promise<AnimeInfo[]> {
+  const searchParams = new URLSearchParams({
+    sort: '-averageRating',
+    'page[limit]': '8',
+  });
+
+  const response = await requestKitsu<KitsuSearchResponse>(`/anime?${searchParams.toString()}`, signal);
+  return response.data.map(toAnimeInfo);
+}
+
 export async function getAnimeById(id: string, signal: AbortSignal): Promise<AnimeInfo> {
   const response = await requestKitsu<{ data: KitsuAnime }>(`/anime/${encodeURIComponent(id)}`, signal);
   return toAnimeInfo(response.data);
