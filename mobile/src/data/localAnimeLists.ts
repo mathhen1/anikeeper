@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AnimeInfo } from '@/src/types/anime';
+import { updateLocalAnimeListCountsCache } from '@/src/data/localAnimeListCountsCache';
 import { updateProfileStatsCache } from '@/src/data/profileStatsCache';
 
 export const localAnimeListOptions = [
@@ -31,6 +32,17 @@ export const emptyLocalAnimeLists: LocalAnimeLists = {
   watching: [],
   planned: [],
 };
+
+function updateAnimeListCountsCache(
+  username: string,
+  lists: LocalAnimeLists,
+): void {
+  updateLocalAnimeListCountsCache(username, {
+    completed: lists.completed.length,
+    watching: lists.watching.length,
+    planned: lists.planned.length,
+  });
+}
 
 const legacyStorageKey = 'anikeeper-local-anime-lists';
 const localNameStorageKey = 'anikeeper-local-name';
@@ -138,6 +150,7 @@ export async function addAnimeToLocalList(
     JSON.stringify(updatedLists),
   );
   updateProfileStatsCache(username, updatedLists.completed);
+  updateAnimeListCountsCache(username, updatedLists);
 
   return updatedLists;
 }
@@ -158,6 +171,7 @@ export async function removeAnimeFromLocalLists(
     JSON.stringify(updatedLists),
   );
   updateProfileStatsCache(username, updatedLists.completed);
+  updateAnimeListCountsCache(username, updatedLists);
   return updatedLists;
 }
 
