@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AnimeArtwork } from '@/src/components/AnimeArtwork';
 import { Screen } from '@/src/components/Screen';
 import { AnimeInfo } from '@/src/types/anime';
@@ -84,7 +84,6 @@ function AnimeRecommendationSection({
 
 export default function HomeScreen() {
   const { colors } = useTheme();
-  const [query, setQuery] = useState('');
   const [mostFavorited, setMostFavorited] = useState<AnimeRecommendationState>({ items: [], isLoading: true, error: '' });
   const [topRated, setTopRated] = useState<AnimeRecommendationState>({ items: [], isLoading: true, error: '' });
   const [mostPopular, setMostPopular] = useState<AnimeRecommendationState>({ items: [], isLoading: true, error: '' });
@@ -116,11 +115,6 @@ export default function HomeScreen() {
     return () => controller.abort();
   }, []);
 
-  const openSearch = () => {
-    const searchQuery = query.trim();
-    router.push({ pathname: '/(app)/add-anime', params: searchQuery ? { query: searchQuery } : {} });
-  };
-
   return (
     <Screen scroll style={styles.screen}>
       <View style={styles.header}>
@@ -130,23 +124,6 @@ export default function HomeScreen() {
         </View>
         <Pressable onPress={() => router.push('/(app)/profile')} style={[styles.avatar, { backgroundColor: colors.accentSoft }]} accessibilityRole="button" accessibilityLabel="Abrir perfil">
           <Text style={[styles.avatarText, { color: colors.accent }]}>M</Text>
-        </Pressable>
-      </View>
-
-      <Text style={[styles.intro, { color: colors.muted }]}>O que vamos assistir hoje?</Text>
-      <View style={[styles.searchBox, { backgroundColor: colors.input, borderColor: colors.border }]}>
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          onSubmitEditing={openSearch}
-          placeholder="Buscar anime, gênero..."
-          placeholderTextColor={colors.muted}
-          style={[styles.searchInput, { color: colors.text }]}
-          returnKeyType="search"
-          accessibilityLabel="Buscar anime"
-        />
-        <Pressable onPress={openSearch} style={[styles.searchButton, { backgroundColor: colors.accentStrong }]} accessibilityRole="button" accessibilityLabel="Pesquisar">
-          <Ionicons name="search" size={17} color="#FFFFFF" />
         </Pressable>
       </View>
 
@@ -192,6 +169,21 @@ export default function HomeScreen() {
         ))}
       </View>
 
+      <Pressable
+        onPress={() => router.push('/(app)/add-anime')}
+        style={({ pressed }) => [
+          styles.searchCard,
+          { backgroundColor: colors.input, borderColor: pressed ? colors.accent : colors.border },
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel="Buscar anime"
+        accessibilityHint="Abre a tela de pesquisa de animes"
+      >
+        <Text style={[styles.searchCardText, { color: colors.muted }]}>Buscar anime</Text>
+        <View style={[styles.searchIcon, { backgroundColor: colors.accentSoft }]}>
+          <Ionicons name="search" size={18} color={colors.accent} />
+        </View>
+      </Pressable>
 
       <AnimeRecommendationSection
         title="Favoritos da galera"
@@ -223,10 +215,9 @@ const styles = StyleSheet.create({
   greeting: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
   avatar: { width: 42, height: 42, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontWeight: '800', fontSize: 17 },
-  intro: { fontSize: 12, marginBottom: 10 },
-  searchBox: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 5, paddingLeft: 14, borderWidth: 1, borderRadius: 15 },
-  searchInput: { flex: 1, fontSize: 12, paddingVertical: 9 },
-  searchButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
+  searchCard: { minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderWidth: 1, borderRadius: 13, marginTop: 18 },
+  searchCardText: { fontSize: 13, fontWeight: '500' },
+  searchIcon: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 10 },
   profileCard: { borderWidth: 1, borderRadius: 19, padding: 17, marginTop: 19 },
   profileCardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardEyebrow: { fontSize: 9, fontWeight: '700', letterSpacing: 1.2 },
