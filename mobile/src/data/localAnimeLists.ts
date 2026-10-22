@@ -31,7 +31,17 @@ export const emptyLocalAnimeLists: LocalAnimeLists = {
   planned: [],
 };
 
-const storageKey = 'anikeeper-local-anime-lists';
+const legacyStorageKey = 'anikeeper-local-anime-lists';
+const localNameStorageKey = 'anikeeper-local-name';
+
+function normalizeUsername(username: string | null): string {
+  return username?.trim().toLowerCase() ?? '';
+}
+
+function getStorageKey(username: string): string {
+  const normalizedUsername = normalizeUsername(username);
+  return `${legacyStorageKey}:${encodeURIComponent(normalizedUsername)}`;
+}
 
 function isAnimeInfo(value: unknown): value is AnimeInfo {
   if (typeof value !== 'object' || value === null) return false;
@@ -58,10 +68,7 @@ function getAnimeEntries(value: unknown): AnimeInfo[] {
   return value.filter(isAnimeInfo);
 }
 
-export async function getLocalAnimeLists(): Promise<LocalAnimeLists> {
-  const storedLists = await AsyncStorage.getItem(storageKey);
-  if (!storedLists) return emptyLocalAnimeLists;
-
+function parseLocalAnimeLists(storedLists: string): LocalAnimeLists {
   const parsedLists: unknown = JSON.parse(storedLists);
   if (typeof parsedLists !== 'object' || parsedLists === null)
     return emptyLocalAnimeLists;
@@ -74,11 +81,44 @@ export async function getLocalAnimeLists(): Promise<LocalAnimeLists> {
   };
 }
 
+export async function migrateLegacyLocalAnimeLists(
+  username: string,
+): Promise<void> {
+  const userStorageKey = getStorageKey(username);
+  const storedLists = await AsyncStorage.getItem(userStorageKey);
+  if (storedLists) return;
+
+  const [legacyListsEntry, usernameEntry] = await AsyncStorage.multiGet([
+    legacyStorageKey,
+    localNameStorageKey,
+  ]);
+  const legacyLists = legacyListsEntry[1];
+  const previousUsername = usernameEntry[1];
+  const belongsToUser =
+    normalizeUsername(previousUsername) === normalizeUsername(username);
+
+  if (!legacyLists || !belongsToUser) return;
+
+  await AsyncStorage.setItem(userStorageKey, legacyLists);
+  await AsyncStorage.removeItem(legacyStorageKey);
+}
+
+export async function getLocalAnimeLists(
+  username: string,
+): Promise<LocalAnimeLists> {
+  await migrateLegacyLocalAnimeLists(username);
+  const storedLists = await AsyncStorage.getItem(getStorageKey(username));
+  if (!storedLists) return emptyLocalAnimeLists;
+
+  return parseLocalAnimeLists(storedLists);
+}
+
 export async function addAnimeToLocalList(
   anime: AnimeInfo,
   listKey: LocalAnimeListKey,
+  username: string,
 ): Promise<LocalAnimeLists> {
-  const currentLists = await getLocalAnimeLists();
+  const currentLists = await getLocalAnimeLists(username);
   const updatedLists: LocalAnimeLists = {
     completed: currentLists.completed.filter(
       (savedAnime) => savedAnime.id !== anime.id,
@@ -92,22 +132,29 @@ export async function addAnimeToLocalList(
   };
 
   updatedLists[listKey] = [anime, ...updatedLists[listKey]];
-  await AsyncStorage.setItem(storageKey, JSON.stringify(updatedLists));
+  await AsyncStorage.setItem(
+    getStorageKey(username),
+    JSON.stringify(updatedLists),
+  );
 
   return updatedLists;
 }
 
 export async function removeAnimeFromLocalLists(
   animeId: string,
+  username: string,
 ): Promise<LocalAnimeLists> {
-  const currentLists = await getLocalAnimeLists();
+  const currentLists = await getLocalAnimeLists(username);
   const updatedLists: LocalAnimeLists = {
     completed: currentLists.completed.filter((anime) => anime.id !== animeId),
     watching: currentLists.watching.filter((anime) => anime.id !== animeId),
     planned: currentLists.planned.filter((anime) => anime.id !== animeId),
   };
 
-  await AsyncStorage.setItem(storageKey, JSON.stringify(updatedLists));
+  await AsyncStorage.setItem(
+    getStorageKey(username),
+    JSON.stringify(updatedLists),
+  );
   return updatedLists;
 }
 

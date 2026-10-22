@@ -44,7 +44,8 @@ export default function MyListScreen() {
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
-      getLocalAnimeLists()
+      setAnimeLists(emptyLocalAnimeLists);
+      getLocalAnimeLists(localName)
         .then((savedLists) => {
           if (isActive) setAnimeLists(savedLists);
         })
@@ -60,7 +61,7 @@ export default function MyListScreen() {
       return () => {
         isActive = false;
       };
-    }, []),
+    }, [localName]),
   );
 
   return (

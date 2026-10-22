@@ -48,7 +48,8 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
-      getLocalAnimeLists()
+      setAnimeLists(emptyLocalAnimeLists);
+      getLocalAnimeLists(localName)
         .then((lists) => {
           if (isActive) setAnimeLists(lists);
         })
@@ -64,7 +65,7 @@ export default function ProfileScreen() {
       return () => {
         isActive = false;
       };
-    }, []),
+    }, [localName]),
   );
 
   const handleSignOut = async () => {
@@ -223,7 +224,7 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
       </View>
-      <Text style={[styles.sectionLabel, { color: colors.muted }]}>CONTA</Text>
+      <Text style={[styles.sectionLabel, { color: colors.muted }]}>SESSÃO</Text>
       <View
         style={[
           styles.settingsCard,
@@ -267,7 +268,7 @@ export default function ProfileScreen() {
       >
         <Ionicons name="log-out-outline" size={17} color={colors.muted} />
         <Text style={[styles.logoutText, { color: colors.muted }]}>
-          Sair da conta
+          Sair da sessão
         </Text>
       </Pressable>
       <Text style={[styles.version, { color: colors.muted }]}>

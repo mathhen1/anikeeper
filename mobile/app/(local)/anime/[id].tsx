@@ -13,6 +13,7 @@ import { AnimeArtwork } from '@/src/components/AnimeArtwork';
 import { Screen } from '@/src/components/Screen';
 import { AnimeInfo } from '@/src/types/anime';
 import { getAnimeById } from '@/src/data/kitsuApi';
+import { useAuth } from '@/src/auth/AuthContext';
 import {
   addAnimeToLocalList,
   getAnimeListStatus,
@@ -27,6 +28,7 @@ export default function AnimeDetailScreen() {
   const params = useLocalSearchParams<{ id: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const { colors } = useTheme();
+  const { localName } = useAuth();
   const [isListMenuOpen, setIsListMenuOpen] = useState(false);
   const [selectedList, setSelectedList] = useState<LocalAnimeListKey | null>(
     null,
@@ -70,7 +72,8 @@ export default function AnimeDetailScreen() {
     if (!remoteAnime) return;
 
     let isActive = true;
-    getLocalAnimeLists()
+    setSelectedList(null);
+    getLocalAnimeLists(localName)
       .then((lists) => {
         if (isActive)
           setSelectedList(getAnimeListStatus(lists, remoteAnime.id));
@@ -88,7 +91,7 @@ export default function AnimeDetailScreen() {
     return () => {
       isActive = false;
     };
-  }, [remoteAnime]);
+  }, [remoteAnime, localName]);
 
   const anime = remoteAnime;
 
@@ -130,7 +133,7 @@ export default function AnimeDetailScreen() {
   const saveAnimeToList = async (listKey: LocalAnimeListKey) => {
     setIsUpdatingList(true);
     try {
-      await addAnimeToLocalList(anime, listKey);
+      await addAnimeToLocalList(anime, listKey, localName);
       setSelectedList(listKey);
       setIsListMenuOpen(false);
     } catch (error: unknown) {
@@ -146,7 +149,7 @@ export default function AnimeDetailScreen() {
   const removeAnimeFromLists = async () => {
     setIsUpdatingList(true);
     try {
-      await removeAnimeFromLocalLists(anime.id);
+      await removeAnimeFromLocalLists(anime.id, localName);
       setSelectedList(null);
       setIsListMenuOpen(false);
     } catch (error: unknown) {

@@ -198,7 +198,8 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
-      getLocalAnimeLists()
+      setAnimeLists(emptyLocalAnimeLists);
+      getLocalAnimeLists(localName)
         .then((lists) => {
           if (isActive) setAnimeLists(lists);
         })
@@ -214,7 +215,7 @@ export default function HomeScreen() {
       return () => {
         isActive = false;
       };
-    }, []),
+    }, [localName]),
   );
 
   useEffect(() => {

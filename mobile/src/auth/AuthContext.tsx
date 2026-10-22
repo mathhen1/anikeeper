@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { migrateLegacyLocalAnimeLists } from '@/src/data/localAnimeLists';
 import {
   createContext,
   PropsWithChildren,
@@ -44,7 +45,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
         setIsAuthenticated(hasSession);
         setAuthMode(mode);
-        setLocalName(savedLocalName ?? '');
+        setLocalName(
+          hasSession && mode === 'local' ? savedLocalName ?? '' : '',
+        );
 
         // Existing prototype sessions had no mode. Keep them on the official route.
         if (hasSession && savedMode !== 'local' && savedMode !== 'official') {
@@ -67,6 +70,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const signInLocal = async (name: string) => {
     const normalizedName = name.trim();
+    const previousLocalName = await AsyncStorage.getItem(
+      'anikeeper-local-name',
+    );
+
+    if (previousLocalName) {
+      await migrateLegacyLocalAnimeLists(previousLocalName);
+    }
+
     await AsyncStorage.setItem('anikeeper-local-name', normalizedName);
     await AsyncStorage.setItem('anikeeper-auth-mode', 'local');
     await AsyncStorage.setItem('anikeeper-auth', 'true');
@@ -76,10 +87,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
   };
 
   const signOut = async () => {
+    if (authMode === 'local' && localName.trim()) {
+      await migrateLegacyLocalAnimeLists(localName);
+      await AsyncStorage.removeItem('anikeeper-local-name');
+    }
+
     await AsyncStorage.removeItem('anikeeper-auth');
     await AsyncStorage.removeItem('anikeeper-auth-mode');
     setIsAuthenticated(false);
     setAuthMode(null);
+    setLocalName('');
   };
 
   return (
