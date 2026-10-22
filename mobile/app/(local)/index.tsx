@@ -29,23 +29,23 @@ import { useTheme } from '@/src/theme/ThemeContext';
 
 const collectionLists = [
   {
-    label: 'Assistindo',
-    listKey: 'watching',
-    icon: 'play-circle-outline' as const,
-    color: '#B59AF7',
-  },
-  {
-    label: 'Quero assistir',
+    label: 'Animes concluídos',
+    listKey: 'completed',
+    icon: 'checkmark-circle-outline' as const,
+    color: '#8DD6B1',
+  }, {
+    label: 'Planejo assistir',
     listKey: 'planned',
     icon: 'bookmark-outline' as const,
     color: '#7FB8E8',
   },
   {
-    label: 'Concluídos',
-    listKey: 'completed',
-    icon: 'checkmark-circle-outline' as const,
-    color: '#8DD6B1',
+    label: 'Assistindo agora',
+    listKey: 'watching',
+    icon: 'play-circle-outline' as const,
+    color: '#B59AF7',
   },
+
 ] as const;
 
 type AnimeRecommendationState = {
