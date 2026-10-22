@@ -36,12 +36,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
     ])
       .then(([savedAuth, savedMode, savedLocalName]) => {
         const hasSession = savedAuth === 'true';
-        let mode: AuthMode = null;
-        if (savedMode === 'local') {
-          mode = 'local';
-        } else if (savedMode === 'official' || hasSession) {
-          mode = 'official';
-        }
+        const mode: AuthMode = hasSession
+          ? savedMode === 'local'
+            ? 'local'
+            : 'official'
+          : null;
 
         setIsAuthenticated(hasSession);
         setAuthMode(mode);
@@ -49,7 +48,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           hasSession && mode === 'local' ? savedLocalName ?? '' : '',
         );
 
-        // Existing prototype sessions had no mode. Keep them on the official route.
+        // Treat existing prototype sessions without a mode as official accounts.
         if (hasSession && savedMode !== 'local' && savedMode !== 'official') {
           AsyncStorage.setItem('anikeeper-auth-mode', 'official').catch(
             () => undefined,
@@ -62,8 +61,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const signInOfficial = async (email: string) => {
     await AsyncStorage.setItem('anikeeper-user', email);
+    await AsyncStorage.removeItem('anikeeper-local-name');
     await AsyncStorage.setItem('anikeeper-auth-mode', 'official');
     await AsyncStorage.setItem('anikeeper-auth', 'true');
+    setLocalName('');
     setIsAuthenticated(true);
     setAuthMode('official');
   };
@@ -78,6 +79,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       await migrateLegacyLocalAnimeLists(previousLocalName);
     }
 
+    await AsyncStorage.removeItem('anikeeper-user');
     await AsyncStorage.setItem('anikeeper-local-name', normalizedName);
     await AsyncStorage.setItem('anikeeper-auth-mode', 'local');
     await AsyncStorage.setItem('anikeeper-auth', 'true');
@@ -94,6 +96,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     await AsyncStorage.removeItem('anikeeper-auth');
     await AsyncStorage.removeItem('anikeeper-auth-mode');
+    await AsyncStorage.removeItem('anikeeper-user');
     setIsAuthenticated(false);
     setAuthMode(null);
     setLocalName('');
