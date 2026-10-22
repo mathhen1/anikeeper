@@ -1,9 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,6 +10,10 @@ import {
   View,
 } from 'react-native';
 import { AnimeArtwork } from '@/src/components/AnimeArtwork';
+import {
+  AnimeListSummaryCard,
+  type AnimeListSummaryItem,
+} from '@/src/components/AnimeListSummaryCard';
 import { Screen } from '@/src/components/Screen';
 import { ProfileSummaryCard } from '@/src/components/ProfileSummaryCard';
 import { AnimeInfo } from '@/src/types/anime';
@@ -19,34 +22,29 @@ import {
   getMostPopularAnime,
   getTopRatedAnime,
 } from '@/src/data/kitsuApi';
-import {
-  emptyLocalAnimeLists,
-  getLocalAnimeLists,
-  LocalAnimeLists,
-} from '@/src/data/localAnimeLists';
 import { useAuth } from '@/src/auth/AuthContext';
 import { useTheme } from '@/src/theme/ThemeContext';
 
 const collectionLists = [
   {
     label: 'Animes concluídos',
-    listKey: 'completed',
+    key: 'completed',
     icon: 'checkmark-circle-outline' as const,
     color: '#8DD6B1',
   }, {
     label: 'Planejo assistir',
-    listKey: 'planned',
+    key: 'planned',
     icon: 'bookmark-outline' as const,
     color: '#7FB8E8',
   },
   {
     label: 'Assistindo agora',
-    listKey: 'watching',
+    key: 'watching',
     icon: 'play-circle-outline' as const,
     color: '#B59AF7',
   },
 
-] as const;
+] satisfies readonly AnimeListSummaryItem[];
 
 type AnimeRecommendationState = {
   items: AnimeInfo[];
@@ -190,32 +188,6 @@ export default function HomeScreen() {
     isLoading: true,
     error: '',
   });
-  const [animeLists, setAnimeLists] =
-    useState<LocalAnimeLists>(emptyLocalAnimeLists);
-
-  useFocusEffect(
-    useCallback(() => {
-      let isActive = true;
-      setAnimeLists(emptyLocalAnimeLists);
-      getLocalAnimeLists(localName)
-        .then((lists) => {
-          if (isActive) setAnimeLists(lists);
-        })
-        .catch((error: unknown) => {
-          if (isActive)
-            Alert.alert(
-              'Erro ao carregar listas',
-              error instanceof Error
-                ? error.message
-                : 'Não foi possível ler seus animes salvos.',
-            );
-        });
-      return () => {
-        isActive = false;
-      };
-    }, [localName]),
-  );
-
   useEffect(() => {
     const controller = new AbortController();
 
@@ -299,44 +271,11 @@ export default function HomeScreen() {
         description="Sua coleção em um só lugar"
       />
 
-      <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          Suas listas
-        </Text>
-        <Pressable
-          onPress={() => router.push('/(local)/mylist')}
-          style={styles.linkButton}
-          accessibilityRole="button"
-        >
-          <Text style={[styles.linkText, { color: colors.accent }]}>
-            Ver coleção
-          </Text>
-          <Ionicons name="arrow-forward" size={14} color={colors.accent} />
-        </Pressable>
-      </View>
-      <View style={styles.listGrid}>
-        {collectionLists.map((list) => (
-          <Pressable
-            key={list.label}
-            onPress={() => router.push('/(local)/mylist')}
-            style={[
-              styles.listCard,
-              { backgroundColor: colors.surface, borderColor: colors.border },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={`Abrir lista ${list.label}`}
-          >
-            <Ionicons name={list.icon} size={19} color={list.color} />
-            <Text style={[styles.listCount, { color: colors.text }]}>
-              {animeLists[list.listKey].length}
-            </Text>
-            <Text style={[styles.listLabel, { color: colors.muted }]}>
-              {list.label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
+      <AnimeListSummaryCard
+        username={localName}
+        items={collectionLists}
+        onPress={() => router.push('/(local)/mylist')}
+      />
       <AnimeRecommendationSection
         title="Favoritos da galera"
         subtitle="Os mais favoritados na Kitsu"
@@ -421,20 +360,4 @@ const styles = StyleSheet.create({
   },
   recommendationRating: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   recommendationRatingText: { fontSize: 10, fontWeight: '700' },
-  linkButton: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  linkText: { fontSize: 10, fontWeight: '700' },
-  listGrid: { flexDirection: 'row', gap: 9 },
-  listCard: {
-    flex: 1,
-    minHeight: 94,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 5,
-    borderRadius: 15,
-    borderWidth: 1,
-    paddingHorizontal: 4,
-    paddingVertical: 10,
-  },
-  listCount: { fontSize: 16, fontWeight: '800' },
-  listLabel: { fontSize: 9, textAlign: 'center' },
 });
