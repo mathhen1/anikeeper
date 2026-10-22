@@ -1,25 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AnimeArtwork } from '@/src/components/AnimeArtwork';
 import { Screen } from '@/src/components/Screen';
 import { AnimeInfo } from '@/src/types/anime';
 import { getAnimeById } from '@/src/data/kitsuApi';
+import { addAnimeToLocalList, getAnimeListStatus, getLocalAnimeLists, LocalAnimeListKey, localAnimeListOptions } from '@/src/data/localAnimeLists';
 import { useTheme } from '@/src/theme/ThemeContext';
-
-const listOptions = [
-  { id: 'watched', label: 'Assistidos', icon: 'checkmark-done-outline' as const },
-  { id: 'watching', label: 'Assistindo', icon: 'play-circle-outline' as const },
-  { id: 'planned', label: 'Pretendo assistir', icon: 'time-outline' as const },
-];
 
 export default function AnimeDetailScreen() {
   const params = useLocalSearchParams<{ id: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const { colors } = useTheme();
   const [isListMenuOpen, setIsListMenuOpen] = useState(false);
-  const [selectedList, setSelectedList] = useState<string | null>(null);
+  const [selectedList, setSelectedList] = useState<LocalAnimeListKey | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [remoteAnime, setRemoteAnime] = useState<AnimeInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
@@ -50,6 +46,21 @@ export default function AnimeDetailScreen() {
     return () => controller.abort();
   }, [id]);
 
+  useEffect(() => {
+    if (!remoteAnime) return;
+
+    let isActive = true;
+    getLocalAnimeLists()
+      .then((lists) => {
+        if (isActive) setSelectedList(getAnimeListStatus(lists, remoteAnime.id));
+      })
+      .catch((error: unknown) => {
+        if (isActive) Alert.alert('Erro ao carregar lista', error instanceof Error ? error.message : 'Não foi possível ler suas listas.');
+      });
+
+    return () => { isActive = false; };
+  }, [remoteAnime]);
+
   const anime = remoteAnime;
 
   if (!anime && isLoading) {
@@ -67,7 +78,20 @@ export default function AnimeDetailScreen() {
     );
   }
 
-  const selectedOption = listOptions.find((option) => option.id === selectedList);
+  const selectedOption = localAnimeListOptions.find((option) => option.key === selectedList);
+
+  const saveAnimeToList = async (listKey: LocalAnimeListKey) => {
+    setIsSaving(true);
+    try {
+      await addAnimeToLocalList(anime, listKey);
+      setSelectedList(listKey);
+      setIsListMenuOpen(false);
+    } catch (error: unknown) {
+      Alert.alert('Não foi possível salvar', error instanceof Error ? error.message : 'Tente novamente.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <Screen scroll style={styles.screen}>
@@ -107,6 +131,7 @@ export default function AnimeDetailScreen() {
 
       <Pressable
         onPress={() => setIsListMenuOpen((isOpen) => !isOpen)}
+        disabled={isSaving}
         style={[styles.addToListButton, { backgroundColor: colors.accentStrong }]}
         accessibilityRole="button"
         accessibilityLabel={selectedOption ? `Na lista ${selectedOption.label}` : 'Adicionar à lista'}
@@ -118,15 +143,16 @@ export default function AnimeDetailScreen() {
 
       {isListMenuOpen && (
         <View style={[styles.listMenu, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {listOptions.map((option, index) => (
+          {localAnimeListOptions.map((option, index) => (
             <Pressable
-              key={option.id}
-              onPress={() => { setSelectedList(option.id); setIsListMenuOpen(false); }}
-              style={[styles.listOption, index < listOptions.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: 1 }]}
+              key={option.key}
+              onPress={() => saveAnimeToList(option.key)}
+              disabled={isSaving}
+              style={[styles.listOption, index < localAnimeListOptions.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: 1 }]}
             >
               <View style={[styles.optionIcon, { backgroundColor: colors.accentSoft }]}><Ionicons name={option.icon} size={17} color={colors.accent} /></View>
               <Text style={[styles.optionLabel, { color: colors.text }]}>{option.label}</Text>
-              {selectedList === option.id && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+              {selectedList === option.key && <Ionicons name="checkmark" size={18} color={colors.accent} />}
             </Pressable>
           ))}
         </View>
