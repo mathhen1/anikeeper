@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AnimeArtwork } from '@/src/components/AnimeArtwork';
 import { Screen } from '@/src/components/Screen';
-import { findAnimeById } from '@/src/data/animeCatalog';
+import { AnimeInfo, findAnimeById } from '@/src/data/animeCatalog';
+import { getAnimeById } from '@/src/data/kitsuApi';
 import { useTheme } from '@/src/theme/ThemeContext';
 
 const listOptions = [
@@ -14,17 +15,54 @@ const listOptions = [
 ];
 
 export default function AnimeDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const anime = findAnimeById(id);
+  const params = useLocalSearchParams<{ id: string | string[] }>();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const localAnime = findAnimeById(id);
   const { colors } = useTheme();
   const [isListMenuOpen, setIsListMenuOpen] = useState(false);
   const [selectedList, setSelectedList] = useState<string | null>(null);
+  const [remoteAnime, setRemoteAnime] = useState<AnimeInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    if (!id || localAnime) {
+      setRemoteAnime(null);
+      setIsLoading(false);
+      setLoadError('');
+      return;
+    }
+
+    const controller = new AbortController();
+    setRemoteAnime(null);
+    setIsLoading(true);
+    setLoadError('');
+
+    getAnimeById(id, controller.signal)
+      .then(setRemoteAnime)
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setLoadError(error instanceof Error ? error.message : 'Não foi possível carregar este anime.');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [id, localAnime]);
+
+  const anime = localAnime ?? remoteAnime;
+
+  if (!anime && isLoading) {
+    return <Screen style={styles.notFound}><ActivityIndicator color={colors.accent} /></Screen>;
+  }
 
   if (!anime) {
     return (
       <Screen style={styles.notFound}>
-        <Ionicons name="search-outline" size={32} color={colors.muted} />
+        <Ionicons name={loadError ? 'cloud-offline-outline' : 'search-outline'} size={32} color={colors.muted} />
         <Text style={[styles.notFoundText, { color: colors.text }]}>Anime não encontrado</Text>
+        {loadError ? <Text style={[styles.notFoundText, { color: colors.muted }]}>{loadError}</Text> : null}
         <Pressable onPress={() => router.back()}><Text style={{ color: colors.accent }}>Voltar</Text></Pressable>
       </Screen>
     );
