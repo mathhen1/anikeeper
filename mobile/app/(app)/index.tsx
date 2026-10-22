@@ -9,9 +9,9 @@ import { getMostFavoritedAnime, getMostPopularAnime, getTopRatedAnime } from '@/
 import { useTheme } from '@/src/theme/ThemeContext';
 
 const collectionLists = [
-  { label: 'Assistindo', count: 4, icon: 'play-circle-outline' as const, color: '#B59AF7' },
-  { label: 'Quero assistir', count: 12, icon: 'bookmark-outline' as const, color: '#7FB8E8' },
-  { label: 'Concluídos', count: 28, icon: 'checkmark-circle-outline' as const, color: '#8DD6B1' },
+  { label: 'Assistindo', count: 0, icon: 'play-circle-outline' as const, color: '#B59AF7' },
+  { label: 'Quero assistir', count: 0, icon: 'bookmark-outline' as const, color: '#7FB8E8' },
+  { label: 'Concluídos', count: 0, icon: 'checkmark-circle-outline' as const, color: '#8DD6B1' },
 ];
 
 
@@ -153,22 +153,24 @@ export default function HomeScreen() {
       <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={styles.profileCardTop}>
           <View>
-            <Text style={[styles.cardEyebrow, { color: colors.muted }]}>SUA JORNADA</Text>
+            <Text style={[styles.cardEyebrow, { color: colors.accent }]}>PROFILE</Text>
             <Text style={[styles.cardTitle, { color: colors.text }]}>Sua coleção em um só lugar</Text>
-          </View>
-          <View style={[styles.journeyIcon, { backgroundColor: colors.accentSoft }]}>
-            <Ionicons name="sparkles" size={18} color={colors.accent} />
           </View>
         </View>
         <View style={styles.statsRow}>
           <View style={styles.stat}>
-            <Text style={[styles.statNumber, { color: colors.text }]}>44</Text>
+            <Text style={[styles.statNumber, { color: colors.text }]}>0</Text>
             <Text style={[styles.statLabel, { color: colors.muted }]}>animes salvos</Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={styles.stat}>
-            <Text style={[styles.statNumber, { color: colors.text }]}>186</Text>
-            <Text style={[styles.statLabel, { color: colors.muted }]}>episódios vistos</Text>
+            <Text style={[styles.statNumber, { color: colors.text }]}>0</Text>
+            <Text style={[styles.statLabel, { color: colors.muted }]}>total de episódios</Text>
+          </View>
+          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+          <View style={styles.stat}>
+            <Text style={[styles.statNumber, { color: colors.text }]}>—</Text>
+            <Text style={[styles.statLabel, { color: colors.muted }]}>horas assistidas</Text>
           </View>
         </View>
       </View>
@@ -229,7 +231,6 @@ const styles = StyleSheet.create({
   profileCardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardEyebrow: { fontSize: 9, fontWeight: '700', letterSpacing: 1.2 },
   cardTitle: { fontSize: 14, fontWeight: '700', marginTop: 5 },
-  journeyIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   statsRow: { flexDirection: 'row', alignItems: 'center', gap: 18, marginTop: 17 },
   stat: { gap: 3 },
   statNumber: { fontSize: 18, fontWeight: '800' },

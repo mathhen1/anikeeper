@@ -32,11 +32,11 @@ export default function ProfileScreen() {
         <View style={[styles.memberBadge, { backgroundColor: colors.accentSoft }]}><Ionicons name="sparkles" size={12} color={colors.accent} /><Text style={[styles.memberText, { color: colors.accent }]}>Membro desde 2024</Text></View>
       </View>
       <View style={[styles.collectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <View style={styles.collectionStat}><Text style={[styles.collectionNumber, { color: colors.text }]}>44</Text><Text style={[styles.collectionLabel, { color: colors.muted }]}>na coleção</Text></View>
+        <View style={styles.collectionStat}><Text style={[styles.collectionNumber, { color: colors.text }]}>0</Text><Text style={[styles.collectionLabel, { color: colors.muted }]}>animes salvos</Text></View>
         <View style={[styles.verticalDivider, { backgroundColor: colors.border }]} />
-        <View style={styles.collectionStat}><Text style={[styles.collectionNumber, { color: colors.text }]}>186</Text><Text style={[styles.collectionLabel, { color: colors.muted }]}>episódios vistos</Text></View>
+        <View style={styles.collectionStat}><Text style={[styles.collectionNumber, { color: colors.text }]}>0</Text><Text style={[styles.collectionLabel, { color: colors.muted }]}>total de episódios</Text></View>
         <View style={[styles.verticalDivider, { backgroundColor: colors.border }]} />
-        <View style={styles.collectionStat}><Text style={[styles.collectionNumber, { color: colors.text }]}>9.1</Text><Text style={[styles.collectionLabel, { color: colors.muted }]}>nota média</Text></View>
+        <View style={styles.collectionStat}><Text style={[styles.collectionNumber, { color: colors.text }]}>—</Text><Text style={[styles.collectionLabel, { color: colors.muted }]}>horas assistidas</Text></View>
       </View>
       <Text style={[styles.sectionLabel, { color: colors.muted }]}>APARÊNCIA</Text>
       <View style={[styles.settingsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
