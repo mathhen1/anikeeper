@@ -9,6 +9,16 @@
     "android": {
       "package": "com.anikeeper.app"
     },
-    "plugins": ["expo-router"]
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O AniKeeper precisa acessar suas fotos para definir sua foto de perfil.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
+    ]
   }
 }
