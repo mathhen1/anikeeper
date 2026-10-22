@@ -97,6 +97,20 @@ export async function addAnimeToLocalList(
   return updatedLists;
 }
 
+export async function removeAnimeFromLocalLists(
+  animeId: string,
+): Promise<LocalAnimeLists> {
+  const currentLists = await getLocalAnimeLists();
+  const updatedLists: LocalAnimeLists = {
+    completed: currentLists.completed.filter((anime) => anime.id !== animeId),
+    watching: currentLists.watching.filter((anime) => anime.id !== animeId),
+    planned: currentLists.planned.filter((anime) => anime.id !== animeId),
+  };
+
+  await AsyncStorage.setItem(storageKey, JSON.stringify(updatedLists));
+  return updatedLists;
+}
+
 export function getAnimeListStatus(
   lists: LocalAnimeLists,
   animeId: string,

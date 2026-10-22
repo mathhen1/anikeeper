@@ -19,6 +19,7 @@ import {
   getLocalAnimeLists,
   LocalAnimeListKey,
   localAnimeListOptions,
+  removeAnimeFromLocalLists,
 } from '@/src/data/localAnimeLists';
 import { useTheme } from '@/src/theme/ThemeContext';
 
@@ -30,7 +31,7 @@ export default function AnimeDetailScreen() {
   const [selectedList, setSelectedList] = useState<LocalAnimeListKey | null>(
     null,
   );
-  const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingList, setIsUpdatingList] = useState(false);
   const [remoteAnime, setRemoteAnime] = useState<AnimeInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
@@ -127,7 +128,7 @@ export default function AnimeDetailScreen() {
   );
 
   const saveAnimeToList = async (listKey: LocalAnimeListKey) => {
-    setIsSaving(true);
+    setIsUpdatingList(true);
     try {
       await addAnimeToLocalList(anime, listKey);
       setSelectedList(listKey);
@@ -138,7 +139,23 @@ export default function AnimeDetailScreen() {
         error instanceof Error ? error.message : 'Tente novamente.',
       );
     } finally {
-      setIsSaving(false);
+      setIsUpdatingList(false);
+    }
+  };
+
+  const removeAnimeFromLists = async () => {
+    setIsUpdatingList(true);
+    try {
+      await removeAnimeFromLocalLists(anime.id);
+      setSelectedList(null);
+      setIsListMenuOpen(false);
+    } catch (error: unknown) {
+      Alert.alert(
+        'Não foi possível remover',
+        error instanceof Error ? error.message : 'Tente novamente.',
+      );
+    } finally {
+      setIsUpdatingList(false);
     }
   };
 
@@ -236,7 +253,7 @@ export default function AnimeDetailScreen() {
 
       <Pressable
         onPress={() => setIsListMenuOpen((isOpen) => !isOpen)}
-        disabled={isSaving}
+        disabled={isUpdatingList}
         style={[
           styles.addToListButton,
           { backgroundColor: colors.accentStrong },
@@ -278,7 +295,7 @@ export default function AnimeDetailScreen() {
             <Pressable
               key={option.key}
               onPress={() => saveAnimeToList(option.key)}
-              disabled={isSaving}
+              disabled={isUpdatingList}
               style={[
                 styles.listOption,
                 index < localAnimeListOptions.length - 1 && {
@@ -304,6 +321,22 @@ export default function AnimeDetailScreen() {
             </Pressable>
           ))}
         </View>
+      )}
+
+      {selectedOption && (
+        <Pressable
+          onPress={removeAnimeFromLists}
+          disabled={isUpdatingList}
+          style={[
+            styles.removeFromListButton,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Remover da lista"
+        >
+          <Ionicons name="trash-outline" size={17} color="#D64545" />
+          <Text style={styles.removeFromListText}>Remover da lista</Text>
+        </Pressable>
       )}
 
       <Text style={[styles.sectionTitle, { color: colors.text }]}>Sinopse</Text>
@@ -403,6 +436,18 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   addToListText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700', flex: 1 },
+  removeFromListButton: {
+    minHeight: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderRadius: 14,
+    marginTop: 9,
+  },
+  removeFromListText: { color: '#D64545', fontSize: 12, fontWeight: '700' },
   listMenu: {
     borderWidth: 1,
     borderRadius: 15,
