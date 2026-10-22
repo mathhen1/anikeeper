@@ -8,7 +8,18 @@ export default function PublicLayout() {
   const { colors } = useTheme();
 
   if (!isReady) {
-    return <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator color={colors.accent} /></View>;
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: colors.background,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <ActivityIndicator color={colors.accent} />
+      </View>
+    );
   }
 
   if (isAuthenticated) {
