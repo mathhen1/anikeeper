@@ -1,7 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  getLocalProfilePhoto,
+  readLocalProfilePhotoCache,
+  subscribeToLocalProfilePhoto,
+} from '@/src/data/localProfilePhoto';
 import { getLocalAnimeLists } from '@/src/data/localAnimeLists';
 import {
   getOrCreateProfileStats,
@@ -29,6 +34,9 @@ export function ProfileSummaryCard({
     username: string;
     stats: ProfileStats | null;
   }>(() => ({ username, stats: readProfileStatsCache(username) }));
+  const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(
+    () => readLocalProfilePhotoCache(username) ?? null,
+  );
   const stats =
     loadedStats.username === username
       ? loadedStats.stats
@@ -52,6 +60,29 @@ export function ProfileSummaryCard({
       })
       .catch((error: unknown) => {
         if (isActive) console.warn('Could not load profile stats.', error);
+      });
+
+    return () => {
+      isActive = false;
+      unsubscribe();
+    };
+  }, [username]);
+
+  useEffect(() => {
+    setProfilePhotoUri(readLocalProfilePhotoCache(username) ?? null);
+    if (!username.trim()) return;
+
+    let isActive = true;
+    const unsubscribe = subscribeToLocalProfilePhoto(username, (uri) => {
+      setProfilePhotoUri(uri);
+    });
+
+    getLocalProfilePhoto(username)
+      .then((uri) => {
+        if (isActive) setProfilePhotoUri(uri);
+      })
+      .catch((error: unknown) => {
+        if (isActive) console.warn('Could not load local profile photo.', error);
       });
 
     return () => {
@@ -103,9 +134,16 @@ export function ProfileSummaryCard({
           accessibilityLabel="Abrir perfil"
           accessibilityHint="Abre as configurações do seu perfil local"
         >
-          <Text style={[styles.avatarText, { color: colors.accent }]}>
-            {profileName.trim().charAt(0).toUpperCase() || 'A'}
-          </Text>
+          {profilePhotoUri ? (
+            <Image
+              source={{ uri: profilePhotoUri }}
+              style={styles.avatarImage}
+            />
+          ) : (
+            <Text style={[styles.avatarText, { color: colors.accent }]}>
+              {profileName.trim().charAt(0).toUpperCase() || 'A'}
+            </Text>
+          )}
         </Pressable>
       </View>
       <View style={styles.statsSection}>
@@ -176,7 +214,9 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  avatarImage: { width: '100%', height: '100%' },
   avatarText: { fontSize: 17, fontWeight: '800' },
   eyebrow: { fontSize: 9, fontWeight: '700', letterSpacing: 1.2 },
   title: { fontSize: 14, fontWeight: '700', marginTop: 5 },
