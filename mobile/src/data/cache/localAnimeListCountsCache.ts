@@ -12,6 +12,10 @@ type LocalAnimeListCountsListener = (counts: LocalAnimeListCounts) => void;
 const memoryCache = new Map<string, LocalAnimeListCounts>();
 const listeners = new Map<string, Set<LocalAnimeListCountsListener>>();
 
+export function clearLocalAnimeListCountsMemoryCache(): void {
+  memoryCache.clear();
+}
+
 function normalizeUsername(username: string): string {
   return username.trim().toLowerCase();
 }

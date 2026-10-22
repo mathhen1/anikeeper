@@ -13,6 +13,10 @@ type ProfileStatsListener = (stats: ProfileStats) => void;
 const memoryCache = new Map<string, ProfileStats>();
 const listeners = new Map<string, Set<ProfileStatsListener>>();
 
+export function clearProfileStatsMemoryCache(): void {
+  memoryCache.clear();
+}
+
 function normalizeUsername(username: string): string {
   return username.trim().toLowerCase();
 }

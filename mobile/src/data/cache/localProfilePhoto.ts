@@ -8,6 +8,10 @@ const profilePhotoListeners = new Map<
   Set<(uri: string | null) => void>
 >();
 
+export function clearLocalProfilePhotoMemoryCache(): void {
+  profilePhotoCache.clear();
+}
+
 function normalizeUsername(username: string): string {
   return username.trim().toLowerCase();
 }
