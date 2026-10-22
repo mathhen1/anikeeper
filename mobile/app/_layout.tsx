@@ -9,9 +9,10 @@ function RootNavigator() {
   return (
     <>
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+      <Stack initialRouteName="(public)" screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
         <Stack.Screen name="(public)" />
         <Stack.Screen name="(app)" />
+        <Stack.Screen name="(local)" />
       </Stack>
     </>
   );
