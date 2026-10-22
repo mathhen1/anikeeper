@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AnimeArtwork } from '@/src/components/AnimeArtwork';
 import { Screen } from '@/src/components/Screen';
+import { ProfileSummaryCard } from '@/src/components/ProfileSummaryCard';
 import { AnimeInfo } from '@/src/types/anime';
 import { getMostFavoritedAnime, getMostPopularAnime, getTopRatedAnime } from '@/src/data/kitsuApi';
 import { emptyLocalAnimeLists, getLocalAnimeLists, LocalAnimeLists } from '@/src/data/localAnimeLists';
@@ -93,7 +94,6 @@ export default function HomeScreen() {
   const [topRated, setTopRated] = useState<AnimeRecommendationState>({ items: [], isLoading: true, error: '' });
   const [mostPopular, setMostPopular] = useState<AnimeRecommendationState>({ items: [], isLoading: true, error: '' });
   const [animeLists, setAnimeLists] = useState<LocalAnimeLists>(emptyLocalAnimeLists);
-  const savedAnimeCount = animeLists.completed.length + animeLists.watching.length + animeLists.planned.length;
 
   useFocusEffect(useCallback(() => {
     let isActive = true;
@@ -160,30 +160,11 @@ export default function HomeScreen() {
         </View>
       </Pressable>
 
-      <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <View style={styles.profileCardTop}>
-          <View>
-            <Text style={[styles.cardEyebrow, { color: colors.accent }]}>PROFILE</Text>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Sua coleção em um só lugar</Text>
-          </View>
-        </View>
-        <View style={styles.statsRow}>
-          <View style={styles.stat}>
-            <Text style={[styles.statNumber, { color: colors.text }]}>{savedAnimeCount}</Text>
-            <Text style={[styles.statLabel, { color: colors.muted }]}>animes salvos</Text>
-          </View>
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.stat}>
-            <Text style={[styles.statNumber, { color: colors.text }]}>0</Text>
-            <Text style={[styles.statLabel, { color: colors.muted }]}>total de episódios</Text>
-          </View>
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.stat}>
-            <Text style={[styles.statNumber, { color: colors.text }]}>—</Text>
-            <Text style={[styles.statLabel, { color: colors.muted }]}>horas assistidas</Text>
-          </View>
-        </View>
-      </View>
+      <ProfileSummaryCard
+        profileName={localName.trim() || 'Animeiro'}
+        description="Sua coleção em um só lugar"
+        completedAnimes={animeLists.completed}
+      />
 
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Suas listas</Text>
@@ -235,15 +216,6 @@ const styles = StyleSheet.create({
   searchCard: { minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderWidth: 1, borderRadius: 13 },
   searchCardText: { fontSize: 13, fontWeight: '500' },
   searchIcon: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 10 },
-  profileCard: { borderWidth: 1, borderRadius: 19, padding: 17, marginTop: 19 },
-  profileCardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardEyebrow: { fontSize: 9, fontWeight: '700', letterSpacing: 1.2 },
-  cardTitle: { fontSize: 14, fontWeight: '700', marginTop: 5 },
-  statsRow: { flexDirection: 'row', alignItems: 'center', gap: 18, marginTop: 17 },
-  stat: { gap: 3 },
-  statNumber: { fontSize: 18, fontWeight: '800' },
-  statLabel: { fontSize: 10 },
-  statDivider: { width: 1, height: 30 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 25, marginBottom: 12 },
   sectionTitle: { fontSize: 16, fontWeight: '700' },
   sectionSubtitle: { fontSize: 10, marginTop: 4 },
