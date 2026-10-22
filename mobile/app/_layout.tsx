@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { DeviceOrientationProvider } from '@/src/orientation/DeviceOrientationProvider';
 import { ThemeProvider, useTheme } from '@/src/theme/ThemeContext';
 import { AuthProvider } from '@/src/auth/AuthContext';
 
@@ -28,11 +29,13 @@ function RootNavigator() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <RootNavigator />
-        </AuthProvider>
-      </ThemeProvider>
+      <DeviceOrientationProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <RootNavigator />
+          </AuthProvider>
+        </ThemeProvider>
+      </DeviceOrientationProvider>
     </SafeAreaProvider>
   );
 }

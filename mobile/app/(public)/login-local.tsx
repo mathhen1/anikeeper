@@ -33,7 +33,7 @@ export default function LocalLoginScreen() {
   };
 
   return (
-    <Screen style={styles.screen} safeAreaEdges={['top', 'bottom']}>
+    <Screen scroll style={styles.screen} safeAreaEdges={['top', 'bottom']}>
       <Pressable
         onPress={() => router.back()}
         style={[styles.backButton, { backgroundColor: colors.surface }]}

@@ -41,6 +41,8 @@ export default function LocalLayout() {
           height: 62 + insets.bottom,
           paddingTop: 10,
           paddingBottom: Math.max(insets.bottom, 10),
+          paddingLeft: Math.max(insets.left, 8),
+          paddingRight: Math.max(insets.right, 8),
         },
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,

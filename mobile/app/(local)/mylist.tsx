@@ -9,6 +9,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimeArtwork } from '@/src/components/AnimeArtwork';
 import { Screen } from '@/src/components/Screen';
 import { ProfileSummaryCard } from '@/src/components/ProfileSummaryCard';
@@ -24,6 +25,7 @@ import { useTheme } from '@/src/theme/ThemeContext';
 export default function MyListScreen() {
   const { colors } = useTheme();
   const { width: windowWidth } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const { localName } = useAuth();
   const [selectedList, setSelectedList] =
     useState<(typeof localAnimeListOptions)[number]['key']>('completed');
@@ -35,7 +37,11 @@ export default function MyListScreen() {
   const currentAnime = animeLists[selectedList];
   const gridGap = 8;
   const cardPadding = 8;
-  const cardWidth = (windowWidth - 48 - gridGap * 2) / 3;
+  const safeWindowWidth = windowWidth - insets.left - insets.right;
+  const listWidth = Math.min(safeWindowWidth, 960) - 48;
+  const columnCount = safeWindowWidth >= 760 ? 5 : safeWindowWidth >= 560 ? 4 : 3;
+  const cardWidth =
+    (listWidth - gridGap * (columnCount - 1)) / columnCount;
   const artworkWidth = cardWidth - cardPadding * 2;
   const artworkHeight = artworkWidth * 1.35;
 
