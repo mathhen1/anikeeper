@@ -127,6 +127,22 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
+      <Pressable
+        onPress={() => router.push('/(app)/add-anime')}
+        style={({ pressed }) => [
+          styles.searchCard,
+          { backgroundColor: colors.input, borderColor: pressed ? colors.accent : colors.border },
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel="Buscar anime"
+        accessibilityHint="Abre a tela de pesquisa de animes"
+      >
+        <Text style={[styles.searchCardText, { color: colors.muted }]}>Buscar anime</Text>
+        <View style={[styles.searchIcon, { backgroundColor: colors.accentSoft }]}>
+          <Ionicons name="search" size={18} color={colors.accent} />
+        </View>
+      </Pressable>
+
       <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={styles.profileCardTop}>
           <View>
@@ -169,22 +185,6 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      <Pressable
-        onPress={() => router.push('/(app)/add-anime')}
-        style={({ pressed }) => [
-          styles.searchCard,
-          { backgroundColor: colors.input, borderColor: pressed ? colors.accent : colors.border },
-        ]}
-        accessibilityRole="button"
-        accessibilityLabel="Buscar anime"
-        accessibilityHint="Abre a tela de pesquisa de animes"
-      >
-        <Text style={[styles.searchCardText, { color: colors.muted }]}>Buscar anime</Text>
-        <View style={[styles.searchIcon, { backgroundColor: colors.accentSoft }]}>
-          <Ionicons name="search" size={18} color={colors.accent} />
-        </View>
-      </Pressable>
-
       <AnimeRecommendationSection
         title="Favoritos da galera"
         subtitle="Os mais favoritados na Kitsu"
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
   greeting: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
   avatar: { width: 42, height: 42, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontWeight: '800', fontSize: 17 },
-  searchCard: { minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderWidth: 1, borderRadius: 13, marginTop: 18 },
+  searchCard: { minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderWidth: 1, borderRadius: 13 },
   searchCardText: { fontSize: 13, fontWeight: '500' },
   searchIcon: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 10 },
   profileCard: { borderWidth: 1, borderRadius: 19, padding: 17, marginTop: 19 },
