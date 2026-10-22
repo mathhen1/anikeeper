@@ -22,7 +22,7 @@ export function ProfileSummaryCard({ profileName, description, completedAnimes, 
   return (
     <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, marginTop: topSpacing }]}>
       <View>
-        <Text style={[styles.eyebrow, { color: colors.accent }]}>{profileName}'S PROFILE</Text>
+        <Text style={[styles.eyebrow, { color: colors.accent }, {textTransform: 'uppercase'}]}>{profileName}'S PROFILE</Text>
         <Text style={[styles.title, { color: colors.text }]}>{description}</Text>
       </View>
       <View style={styles.statsRow}>
