@@ -5,10 +5,11 @@ import { useTheme } from '@/src/theme/ThemeContext';
 import { ActivityIndicator, View } from 'react-native';
 
 export default function AppLayout() {
-  const { isAuthenticated, isReady } = useAuth();
+  const { authMode, isAuthenticated, isReady } = useAuth();
   const { colors } = useTheme();
   if (!isReady) return <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator color={colors.accent} /></View>;
-  if (!isAuthenticated) return <Redirect href="/(public)/login" />;
+  if (isAuthenticated && authMode === 'local') return <Redirect href="/(local)" />;
+  if (!isAuthenticated || authMode !== 'official') return <Redirect href="/(public)" />;
 
   return (
     <Tabs initialRouteName="index" screenOptions={{ headerShown: false, tabBarStyle: { backgroundColor: colors.tabBar, borderTopColor: colors.border, height: 86, paddingTop: 10, paddingBottom: 24 }, tabBarActiveTintColor: colors.accent, tabBarInactiveTintColor: colors.muted, tabBarLabelStyle: { fontSize: 10, fontWeight: '600' } }}>

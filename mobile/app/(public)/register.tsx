@@ -8,14 +8,14 @@ import { useAuth } from '@/src/auth/AuthContext';
 
 export default function RegisterScreen() {
   const { colors } = useTheme();
-  const { signIn } = useAuth();
+  const { signInOfficial } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const createAccount = async () => {
     if (!name.trim() || !email.trim() || password.trim().length < 6) return Alert.alert('Confira seus dados', 'Preencha todos os campos e use uma senha com pelo menos 6 caracteres.');
-    await signIn(email.trim());
+    await signInOfficial(email.trim());
     router.replace('/(app)');
   };
 

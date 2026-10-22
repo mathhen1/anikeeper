@@ -8,14 +8,14 @@ import { useAuth } from '@/src/auth/AuthContext';
 
 export default function LoginScreen() {
   const { colors } = useTheme();
-  const { signIn } = useAuth();
+  const { signInOfficial } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) return Alert.alert('Faltou preencher', 'Informe seu e-mail e sua senha para continuar.');
-    await signIn(email.trim());
+    await signInOfficial(email.trim());
     router.replace('/(app)');
   };
 

@@ -1,29 +1,77 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, PropsWithChildren, useContext, useEffect, useState } from 'react';
 
-type AuthContextValue = { isAuthenticated: boolean; isReady: boolean; signIn: (email: string) => Promise<void>; signOut: () => Promise<void> };
+export type AuthMode = 'official' | 'local' | null;
+
+type AuthContextValue = {
+  authMode: AuthMode;
+  isAuthenticated: boolean;
+  isReady: boolean;
+  localName: string;
+  signInOfficial: (email: string) => Promise<void>;
+  signInLocal: (name: string) => Promise<void>;
+  signOut: () => Promise<void>;
+};
+
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>(null);
+  const [localName, setLocalName] = useState('');
 
   useEffect(() => {
-    AsyncStorage.getItem('anikeeper-auth').then((value) => setIsAuthenticated(value === 'true')).catch(() => undefined).finally(() => setIsReady(true));
+    Promise.all([
+      AsyncStorage.getItem('anikeeper-auth'),
+      AsyncStorage.getItem('anikeeper-auth-mode'),
+      AsyncStorage.getItem('anikeeper-local-name'),
+    ]).then(([savedAuth, savedMode, savedLocalName]) => {
+      const hasSession = savedAuth === 'true';
+      let mode: AuthMode = null;
+      if (savedMode === 'local') {
+        mode = 'local';
+      } else if (savedMode === 'official' || hasSession) {
+        mode = 'official';
+      }
+
+      setIsAuthenticated(hasSession);
+      setAuthMode(mode);
+      setLocalName(savedLocalName ?? '');
+
+      // Existing prototype sessions had no mode. Keep them on the official route.
+      if (hasSession && savedMode !== 'local' && savedMode !== 'official') {
+        AsyncStorage.setItem('anikeeper-auth-mode', 'official').catch(() => undefined);
+      }
+    }).catch(() => undefined).finally(() => setIsReady(true));
   }, []);
 
-  const signIn = async (email: string) => {
+  const signInOfficial = async (email: string) => {
     await AsyncStorage.setItem('anikeeper-user', email);
+    await AsyncStorage.setItem('anikeeper-auth-mode', 'official');
     await AsyncStorage.setItem('anikeeper-auth', 'true');
     setIsAuthenticated(true);
+    setAuthMode('official');
+  };
+
+  const signInLocal = async (name: string) => {
+    const normalizedName = name.trim();
+    await AsyncStorage.setItem('anikeeper-local-name', normalizedName);
+    await AsyncStorage.setItem('anikeeper-auth-mode', 'local');
+    await AsyncStorage.setItem('anikeeper-auth', 'true');
+    setLocalName(normalizedName);
+    setIsAuthenticated(true);
+    setAuthMode('local');
   };
 
   const signOut = async () => {
     await AsyncStorage.removeItem('anikeeper-auth');
+    await AsyncStorage.removeItem('anikeeper-auth-mode');
     setIsAuthenticated(false);
+    setAuthMode(null);
   };
 
-  return <AuthContext.Provider value={{ isAuthenticated, isReady, signIn, signOut }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ authMode, isAuthenticated, isReady, localName, signInOfficial, signInLocal, signOut }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
