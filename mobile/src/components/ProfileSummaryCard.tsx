@@ -6,14 +6,14 @@ import {
   getLocalProfilePhoto,
   readLocalProfilePhotoCache,
   subscribeToLocalProfilePhoto,
-} from '@/src/data/localProfilePhoto';
-import { getLocalAnimeLists } from '@/src/data/localAnimeLists';
+} from '@/src/data/cache/localProfilePhoto';
+import { getLocalAnimeLists } from '@/src/data/cache/localAnimeLists';
 import {
   getOrCreateProfileStats,
   ProfileStats,
   readProfileStatsCache,
   subscribeToProfileStats,
-} from '@/src/data/profileStatsCache';
+} from '@/src/data/cache/localProfileStatsCache';
 import { useTheme } from '@/src/theme/ThemeContext';
 
 type ProfileSummaryCardProps = {

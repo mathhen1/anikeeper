@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { migrateLegacyLocalAnimeLists } from '@/src/data/localAnimeLists';
+import { migrateLegacyLocalAnimeLists } from '@/src/data/cache/localAnimeLists';
 import {
   createContext,
   PropsWithChildren,

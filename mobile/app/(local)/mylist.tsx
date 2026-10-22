@@ -19,7 +19,7 @@ import {
   getLocalAnimeLists,
   LocalAnimeLists,
   localAnimeListOptions,
-} from '@/src/data/localAnimeLists';
+} from '@/src/data/cache/localAnimeLists';
 import { useTheme } from '@/src/theme/ThemeContext';
 
 export default function MyListScreen() {

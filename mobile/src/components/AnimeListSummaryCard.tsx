@@ -4,13 +4,13 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   getLocalAnimeLists,
   type LocalAnimeListKey,
-} from '@/src/data/localAnimeLists';
+} from '@/src/data/cache/localAnimeLists';
 import {
   getOrCreateLocalAnimeListCounts,
   readLocalAnimeListCountsCache,
   subscribeToLocalAnimeListCounts,
   type LocalAnimeListCounts,
-} from '@/src/data/localAnimeListCountsCache';
+} from '@/src/data/cache/localAnimeListCountsCache';
 import { useTheme } from '@/src/theme/ThemeContext';
 
 export type AnimeListSummaryItem = {

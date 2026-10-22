@@ -21,7 +21,7 @@ import {
   LocalAnimeListKey,
   localAnimeListOptions,
   removeAnimeFromLocalLists,
-} from '@/src/data/localAnimeLists';
+} from '@/src/data/cache/localAnimeLists';
 import { useTheme } from '@/src/theme/ThemeContext';
 
 export default function AnimeDetailScreen() {
