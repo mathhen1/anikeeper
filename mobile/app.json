@@ -4,7 +4,7 @@
     "slug": "anikeeper",
     "scheme": "anikeeper",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "userInterfaceStyle": "automatic",
     "android": {
       "package": "com.anikeeper.app"
@@ -17,6 +17,12 @@
           "photosPermission": "O AniKeeper precisa acessar suas fotos para definir sua foto de perfil.",
           "cameraPermission": false,
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-screen-orientation",
+        {
+          "initialOrientation": "DEFAULT"
         }
       ]
     ]
