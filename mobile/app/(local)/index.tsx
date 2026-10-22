@@ -1,18 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AnimeArtwork } from '@/src/components/AnimeArtwork';
 import { Screen } from '@/src/components/Screen';
 import { AnimeInfo } from '@/src/types/anime';
 import { getMostFavoritedAnime, getMostPopularAnime, getTopRatedAnime } from '@/src/data/kitsuApi';
+import { emptyLocalAnimeLists, getLocalAnimeLists, LocalAnimeLists } from '@/src/data/localAnimeLists';
 import { useAuth } from '@/src/auth/AuthContext';
 import { useTheme } from '@/src/theme/ThemeContext';
 
 const collectionLists = [
-  { label: 'Assistindo', count: 0, icon: 'play-circle-outline' as const, color: '#B59AF7' },
-  { label: 'Quero assistir', count: 0, icon: 'bookmark-outline' as const, color: '#7FB8E8' },
-  { label: 'Concluídos', count: 0, icon: 'checkmark-circle-outline' as const, color: '#8DD6B1' },
+  { label: 'Assistindo', listKey: 'watching', icon: 'play-circle-outline' as const, color: '#B59AF7' },
+  { label: 'Quero assistir', listKey: 'planned', icon: 'bookmark-outline' as const, color: '#7FB8E8' },
+  { label: 'Concluídos', listKey: 'completed', icon: 'checkmark-circle-outline' as const, color: '#8DD6B1' },
 ];
 
 
@@ -91,6 +92,18 @@ export default function HomeScreen() {
   const [mostFavorited, setMostFavorited] = useState<AnimeRecommendationState>({ items: [], isLoading: true, error: '' });
   const [topRated, setTopRated] = useState<AnimeRecommendationState>({ items: [], isLoading: true, error: '' });
   const [mostPopular, setMostPopular] = useState<AnimeRecommendationState>({ items: [], isLoading: true, error: '' });
+  const [animeLists, setAnimeLists] = useState<LocalAnimeLists>(emptyLocalAnimeLists);
+  const savedAnimeCount = animeLists.completed.length + animeLists.watching.length + animeLists.planned.length;
+
+  useFocusEffect(useCallback(() => {
+    let isActive = true;
+    getLocalAnimeLists().then((lists) => {
+      if (isActive) setAnimeLists(lists);
+    }).catch((error: unknown) => {
+      if (isActive) Alert.alert('Erro ao carregar listas', error instanceof Error ? error.message : 'Não foi possível ler seus animes salvos.');
+    });
+    return () => { isActive = false; };
+  }, []));
 
   useEffect(() => {
     const controller = new AbortController();
@@ -156,7 +169,7 @@ export default function HomeScreen() {
         </View>
         <View style={styles.statsRow}>
           <View style={styles.stat}>
-            <Text style={[styles.statNumber, { color: colors.text }]}>0</Text>
+            <Text style={[styles.statNumber, { color: colors.text }]}>{savedAnimeCount}</Text>
             <Text style={[styles.statLabel, { color: colors.muted }]}>animes salvos</Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
@@ -183,7 +196,7 @@ export default function HomeScreen() {
         {collectionLists.map((list) => (
           <Pressable key={list.label} onPress={() => router.push('/(local)/mylist')} style={[styles.listCard, { backgroundColor: colors.surface, borderColor: colors.border }]} accessibilityRole="button" accessibilityLabel={`Abrir lista ${list.label}`}>
             <Ionicons name={list.icon} size={19} color={list.color} />
-            <Text style={[styles.listCount, { color: colors.text }]}>{list.count}</Text>
+            <Text style={[styles.listCount, { color: colors.text }]}>{animeLists[list.listKey].length}</Text>
             <Text style={[styles.listLabel, { color: colors.muted }]}>{list.label}</Text>
           </Pressable>
         ))}
