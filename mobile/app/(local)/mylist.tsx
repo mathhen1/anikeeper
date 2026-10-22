@@ -1,7 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { AnimeArtwork } from '@/src/components/AnimeArtwork';
 import { Screen } from '@/src/components/Screen';
 import { ProfileSummaryCard } from '@/src/components/ProfileSummaryCard';
@@ -16,6 +23,7 @@ import { useTheme } from '@/src/theme/ThemeContext';
 
 export default function MyListScreen() {
   const { colors } = useTheme();
+  const { width: windowWidth } = useWindowDimensions();
   const { localName } = useAuth();
   const displayName = localName.trim().split(/\s+/)[0] || 'Animeiro';
   const avatarInitial = displayName.charAt(0).toUpperCase();
@@ -27,6 +35,11 @@ export default function MyListScreen() {
     (list) => list.key === selectedList,
   )!;
   const currentAnime = animeLists[selectedList];
+  const gridGap = 8;
+  const cardPadding = 8;
+  const cardWidth = (windowWidth - 48 - gridGap * 2) / 3;
+  const artworkWidth = cardWidth - cardPadding * 2;
+  const artworkHeight = artworkWidth * 1.35;
 
   useFocusEffect(
     useCallback(() => {
@@ -178,7 +191,7 @@ export default function MyListScreen() {
           </Text>
         </View>
       ) : (
-        <View style={styles.animeList}>
+        <View style={styles.animeGrid}>
           {currentAnime.map((anime) => (
             <Pressable
               key={anime.id}
@@ -190,35 +203,33 @@ export default function MyListScreen() {
               }
               style={[
                 styles.animeCard,
-                { backgroundColor: colors.surface, borderColor: colors.border },
+                {
+                  width: cardWidth,
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  padding: cardPadding,
+                },
               ]}
               accessibilityRole="button"
               accessibilityLabel={`Abrir ${anime.title}`}
             >
-              <AnimeArtwork anime={anime} width={58} height={76} />
-              <View style={styles.animeCopy}>
-                <Text
-                  numberOfLines={2}
-                  style={[styles.animeTitle, { color: colors.text }]}
-                >
-                  {anime.title}
+              <AnimeArtwork
+                anime={anime}
+                width={artworkWidth}
+                height={artworkHeight}
+              />
+              <Text
+                numberOfLines={2}
+                style={[styles.animeTitle, { color: colors.text }]}
+              >
+                {anime.title}
+              </Text>
+              <View style={styles.animeRating}>
+                <Ionicons name="star" size={12} color="#F1C66A" />
+                <Text style={[styles.animeRatingText, { color: colors.muted }]}>
+                  {anime.rating}
                 </Text>
-                <Text
-                  numberOfLines={1}
-                  style={[styles.animeDetails, { color: colors.muted }]}
-                >
-                  {anime.year} · {anime.type} · {anime.episodes} eps.
-                </Text>
-                <View style={styles.animeRating}>
-                  <Ionicons name="star" size={12} color="#F1C66A" />
-                  <Text
-                    style={[styles.animeRatingText, { color: colors.muted }]}
-                  >
-                    {anime.rating}
-                  </Text>
-                </View>
               </View>
-              <Ionicons name="chevron-forward" size={17} color={colors.muted} />
             </Pressable>
           ))}
         </View>
@@ -303,19 +314,18 @@ const styles = StyleSheet.create({
     borderRadius: 15,
   },
   emptyListText: { fontSize: 11 },
-  animeList: { gap: 9 },
-  animeCard: {
-    minHeight: 94,
+  animeGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 9,
-    borderWidth: 1,
-    borderRadius: 15,
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  animeCopy: { flex: 1, gap: 6 },
-  animeTitle: { fontSize: 13, fontWeight: '700' },
-  animeDetails: { fontSize: 10 },
+  animeCard: {
+    alignItems: 'stretch',
+    gap: 7,
+    borderWidth: 1,
+    borderRadius: 14,
+  },
+  animeTitle: { fontSize: 11, lineHeight: 15, fontWeight: '700' },
   animeRating: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   animeRatingText: { fontSize: 10, fontWeight: '600' },
 });
