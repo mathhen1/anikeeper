@@ -133,3 +133,64 @@ export async function saveLocalProfilePhoto(
   cacheProfilePhoto(normalizedUsername, photoUri);
   return photoUri;
 }
+
+export async function renameLocalProfilePhoto(
+  currentUsername: string,
+  newUsername: string,
+): Promise<void> {
+  const currentKey = getStorageKey(currentUsername);
+  const newKey = getStorageKey(newUsername);
+  if (currentKey === newKey) return;
+
+  const currentPhotoUri = await AsyncStorage.getItem(currentKey);
+  if (!currentPhotoUri) return;
+
+  if (await AsyncStorage.getItem(newKey)) {
+    throw new Error('Este username já possui uma foto de perfil local.');
+  }
+
+  const currentPhoto = new File(currentPhotoUri);
+  if (!currentPhoto.exists) {
+    await AsyncStorage.removeItem(currentKey);
+    cacheProfilePhoto(currentUsername, null);
+    return;
+  }
+
+  const newPhoto = new File(Paths.document, getFileName(newUsername));
+  await currentPhoto.copy(newPhoto, { overwrite: false });
+  await AsyncStorage.setItem(newKey, newPhoto.uri);
+  await AsyncStorage.removeItem(currentKey);
+
+  const oldCachedPhoto = new File(Paths.cache, getFileName(currentUsername));
+  if (oldCachedPhoto.exists) oldCachedPhoto.delete();
+
+  const newCachedPhoto = new File(Paths.cache, getFileName(newUsername));
+  let displayedPhotoUri = newPhoto.uri;
+  try {
+    await newPhoto.copy(newCachedPhoto, { overwrite: true });
+    displayedPhotoUri = newCachedPhoto.uri;
+  } catch (error) {
+    console.warn('Could not cache the renamed profile photo.', error);
+  }
+
+  const oldPersistentPhoto = new File(currentPhotoUri);
+  if (oldPersistentPhoto.exists) oldPersistentPhoto.delete();
+  cacheProfilePhoto(currentUsername, null);
+  cacheProfilePhoto(newUsername, displayedPhotoUri);
+}
+
+export async function deleteLocalProfilePhoto(username: string): Promise<void> {
+  const photoUri = await AsyncStorage.getItem(getStorageKey(username));
+  if (photoUri) {
+    const persistentPhoto = new File(photoUri);
+    if (persistentPhoto.exists) persistentPhoto.delete();
+    await AsyncStorage.removeItem(getStorageKey(username));
+  }
+
+  const storedPhoto = new File(Paths.document, getFileName(username));
+  if (storedPhoto.exists) storedPhoto.delete();
+
+  const cachedPhoto = new File(Paths.cache, getFileName(username));
+  if (cachedPhoto.exists) cachedPhoto.delete();
+  cacheProfilePhoto(username, null);
+}

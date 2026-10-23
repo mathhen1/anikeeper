@@ -126,6 +126,47 @@ export async function getLocalAnimeLists(
   return parseLocalAnimeLists(storedLists);
 }
 
+export async function renameLocalAnimeLists(
+  currentUsername: string,
+  newUsername: string,
+): Promise<LocalAnimeLists> {
+  const currentKey = getStorageKey(currentUsername);
+  const newKey = getStorageKey(newUsername);
+  const currentLists = await getLocalAnimeLists(currentUsername);
+
+  if (currentKey === newKey) return currentLists;
+
+  if (await AsyncStorage.getItem(newKey)) {
+    throw new Error('Este username já possui uma coleção local.');
+  }
+
+  await AsyncStorage.setItem(newKey, JSON.stringify(currentLists));
+  await AsyncStorage.removeItem(currentKey);
+  updateProfileStatsCache(currentUsername, emptyLocalAnimeLists.completed);
+  updateAnimeListCountsCache(currentUsername, emptyLocalAnimeLists);
+  updateProfileStatsCache(newUsername, currentLists.completed);
+  updateAnimeListCountsCache(newUsername, currentLists);
+
+  return currentLists;
+}
+
+export async function clearLocalAnimeLists(username: string): Promise<void> {
+  await migrateLegacyLocalAnimeLists(username);
+  await AsyncStorage.setItem(
+    getStorageKey(username),
+    JSON.stringify(emptyLocalAnimeLists),
+  );
+  updateProfileStatsCache(username, emptyLocalAnimeLists.completed);
+  updateAnimeListCountsCache(username, emptyLocalAnimeLists);
+}
+
+export async function deleteLocalAnimeLists(username: string): Promise<void> {
+  await migrateLegacyLocalAnimeLists(username);
+  await AsyncStorage.removeItem(getStorageKey(username));
+  updateProfileStatsCache(username, emptyLocalAnimeLists.completed);
+  updateAnimeListCountsCache(username, emptyLocalAnimeLists);
+}
+
 export async function addAnimeToLocalList(
   anime: AnimeInfo,
   listKey: LocalAnimeListKey,
