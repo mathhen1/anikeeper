@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from 'expo-sqlite/kv-store';
 import { AnimeInfo } from '@/src/types/anime';
 import { updateLocalAnimeListCountsCache } from '@/src/data/cache/localAnimeListCountsCache';
 import { updateProfileStatsCache } from '@/src/data/cache/localProfileStatsCache';

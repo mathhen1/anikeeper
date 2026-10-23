@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from 'expo-sqlite/kv-store';
 import { Directory, File, Paths } from 'expo-file-system';
 import { clearLocalAnimeListCountsMemoryCache } from '@/src/data/cache/localAnimeListCountsCache';
 import { clearLocalProfilePhotoMemoryCache } from '@/src/data/cache/localProfilePhoto';

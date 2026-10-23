@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from 'expo-sqlite/kv-store';
 import { File, Paths } from 'expo-file-system';
 
 const storageKeyPrefix = 'anikeeper-local-profile-photo';
