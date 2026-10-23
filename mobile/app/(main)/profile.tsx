@@ -307,7 +307,7 @@ export default function ProfileScreen() {
           )}
         </Pressable>
         <Text style={[styles.name, { color: colors.accent }]}>
-          {displayName.toUpperCase()}
+          {displayName}
         </Text>
         <Text style={[styles.email, { color: colors.muted }]}>
           {isLocalAccount ? 'Dados salvos neste aparelho' : 'Conta oficial'}
