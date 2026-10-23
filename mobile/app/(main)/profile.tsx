@@ -16,6 +16,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Screen } from '@/src/components/Screen';
+import { AccountDetails } from '@/src/components/AccountDetails';
 import { useAuth } from '@/src/auth/AuthContext';
 import {
   getLocalProfilePhoto,
@@ -68,6 +69,7 @@ export default function ProfileScreen() {
   const avatarInitial = displayName.charAt(0).toUpperCase();
   const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
   const [isPhotoModalVisible, setIsPhotoModalVisible] = useState(false);
+  const [isAccountDetailsVisible, setIsAccountDetailsVisible] = useState(false);
   const [isChangingPhoto, setIsChangingPhoto] = useState(false);
   const [isExportingData, setIsExportingData] = useState(false);
   const photoSize = Math.min(screenWidth - 48, 420);
@@ -183,6 +185,11 @@ export default function ProfileScreen() {
 
     if (title === 'Ajuda e suporte') {
       void openSupportDocumentation();
+      return;
+    }
+
+    if (title === 'Detalhes da conta') {
+      setIsAccountDetailsVisible(true);
       return;
     }
 
@@ -513,6 +520,12 @@ export default function ProfileScreen() {
           ) : null}
         </View>
       </Modal>
+      <AccountDetails
+        visible={isAccountDetailsVisible}
+        username={displayName}
+        photoUri={profilePhotoUri}
+        onClose={() => setIsAccountDetailsVisible(false)}
+      />
     </Screen>
   );
 }
