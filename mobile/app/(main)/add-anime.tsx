@@ -13,12 +13,10 @@ import {
 import { AnimeArtwork } from '@/src/components/AnimeArtwork';
 import { Screen } from '@/src/components/Screen';
 import { AnimeInfo } from '@/src/types/anime';
-import { AnimeTypeFilter, searchAnime } from '@/src/data/kitsuApi';
+import { searchAnime } from '@/src/data/kitsuApi';
 import { useTheme } from '@/src/theme/ThemeContext';
 
 const searchHistoryStorageKey = 'anikeeper-local-anime-search-history';
-const typeFilters = ['Todos', 'Séries', 'Filmes'] as const;
-type TypeFilter = (typeof typeFilters)[number];
 type SearchStatus = 'idle' | 'loading' | 'success' | 'error';
 
 function isAnimeInfo(value: unknown): value is AnimeInfo {
@@ -41,17 +39,10 @@ function isAnimeInfo(value: unknown): value is AnimeInfo {
   );
 }
 
-function getApiTypeFilter(filter: TypeFilter): AnimeTypeFilter {
-  if (filter === 'Séries') return 'tv';
-  if (filter === 'Filmes') return 'movie';
-  return 'all';
-}
-
 export default function AddAnimeScreen() {
   const { colors } = useTheme();
   const params = useLocalSearchParams<{ query?: string | string[] }>();
   const [query, setQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<TypeFilter>('Todos');
   const [history, setHistory] = useState<AnimeInfo[]>([]);
   const [searchResults, setSearchResults] = useState<AnimeInfo[]>([]);
   const [searchStatus, setSearchStatus] = useState<SearchStatus>('idle');
@@ -94,7 +85,7 @@ export default function AddAnimeScreen() {
     const searchTimeout = setTimeout(() => {
       searchAnime(
         normalizedQuery,
-        getApiTypeFilter(selectedFilter),
+        'all',
         controller.signal,
       )
         .then((results) => {
@@ -116,7 +107,7 @@ export default function AddAnimeScreen() {
       clearTimeout(searchTimeout);
       controller.abort();
     };
-  }, [query, selectedFilter]);
+  }, [query]);
 
   const openAnime = async (anime: AnimeInfo) => {
     const nextHistory = [
@@ -170,7 +161,7 @@ export default function AddAnimeScreen() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Título, gênero ou nome original"
+          placeholder="Nome do anime..."
           placeholderTextColor={colors.muted}
           style={[styles.searchInput, { color: colors.text }]}
           returnKeyType="search"
@@ -187,40 +178,8 @@ export default function AddAnimeScreen() {
         )}
       </View>
       <Text style={[styles.helperText, { color: colors.muted }]}>
-        {normalizedQuery.length === 1
-          ? 'Digite mais uma letra para pesquisar.'
-          : 'Pesquise por título, gênero ou nome original.'}
+        Pesquise pelo nome do anime.
       </Text>
-
-      <View style={styles.filterRow}>
-        {typeFilters.map((filter) => {
-          const isSelected = selectedFilter === filter;
-          return (
-            <Pressable
-              key={filter}
-              onPress={() => setSelectedFilter(filter)}
-              style={[
-                styles.filterChip,
-                {
-                  backgroundColor: isSelected
-                    ? colors.accentSoft
-                    : colors.surface,
-                  borderColor: isSelected ? colors.accent : colors.border,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.filterText,
-                  { color: isSelected ? colors.accent : colors.muted },
-                ]}
-              >
-                {filter}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
 
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -401,14 +360,6 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 12, paddingVertical: 13 },
   helperText: { fontSize: 10, marginTop: 8 },
-  filterRow: { flexDirection: 'row', gap: 8, marginTop: 17 },
-  filterChip: {
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-    borderWidth: 1,
-    borderRadius: 11,
-  },
-  filterText: { fontSize: 10, fontWeight: '700' },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
