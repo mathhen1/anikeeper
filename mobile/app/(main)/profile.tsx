@@ -40,17 +40,17 @@ const menuItems: {
   {
     icon: 'code-download-outline',
     title: 'Extrair dados',
-    detail: 'Salve seus animes em uma lista real',
+    detail: 'Exporte suas listas em um arquivo de texto',
   },
   {
     icon: 'shield-checkmark-outline',
     title: 'Detalhes da conta',
-    detail: 'Faça ajustes no seu perfil',
+    detail: 'Ajuste as configurações do seu perfil',
   },
   {
     icon: 'help-circle-outline',
     title: 'Ajuda e suporte',
-    detail: 'Estamos por aqui',
+    detail: 'Confira a documentação do projeto',
   },
 ];
 
