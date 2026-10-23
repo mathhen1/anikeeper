@@ -40,12 +40,7 @@ const menuItems: {
   {
     icon: 'code-download-outline',
     title: 'Extrair dados',
-    detail: 'Salve suas informações para reuso',
-  },
-  {
-    icon: 'code-slash-outline',
-    title: 'Importar dados',
-    detail: 'Importe informações de perfis anteriores',
+    detail: 'Salve seus animes em uma lista real',
   },
   {
     icon: 'shield-checkmark-outline',
@@ -149,7 +144,7 @@ export default function ProfileScreen() {
       await exportLocalAnimeData(localName);
       Alert.alert(
         'Dados exportados',
-        `O arquivo ${localName}.json foi salvo na pasta Downloads.`,
+        'O arquivo anikeeper-listas.txt foi salvo na pasta Downloads.',
       );
     } catch (error) {
       Alert.alert(

@@ -3,11 +3,10 @@ import {
   StorageAccessFramework,
   writeAsStringAsync,
 } from 'expo-file-system/legacy';
-import { getLocalAnimeLists } from '@/src/data/cache/localAnimeLists';
-
-function sanitizeFileName(value: string): string {
-  return value.trim().replace(/[<>:"/\\|?*\u0000-\u001F]/g, '_');
-}
+import {
+  getLocalAnimeLists,
+  localAnimeListOptions,
+} from '@/src/data/cache/localAnimeLists';
 
 function isDownloadsDirectory(directoryUri: string): boolean {
   return decodeURIComponent(directoryUri).toLowerCase().includes('download');
@@ -34,19 +33,20 @@ export async function exportLocalAnimeData(username: string): Promise<void> {
   }
 
   const localLists = await getLocalAnimeLists(username);
-  const exportData = {
-    app: 'AniKeeper',
-    schemaVersion: 1,
-    exportedAt: new Date().toISOString(),
-    username,
-    lists: localLists,
-  };
-  const fileName = sanitizeFileName(username) || 'anikeeper';
+  const exportSections = localAnimeListOptions.map((list) => {
+    const animeTitles = localLists[list.key]
+      .map((anime) => anime.title.trim())
+      .filter(Boolean);
+    const heading = list.label.toUpperCase();
+
+    return `${heading}\n\n${animeTitles.join('\n')}`;
+  });
+  const exportContent = exportSections.join('\n\n');
   const fileUri = await StorageAccessFramework.createFileAsync(
     permission.directoryUri,
-    fileName,
-    'application/json',
+    'anikeeper-listas.txt',
+    'text/plain',
   );
 
-  await writeAsStringAsync(fileUri, JSON.stringify(exportData, null, 2));
+  await writeAsStringAsync(fileUri, exportContent);
 }
