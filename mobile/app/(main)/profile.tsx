@@ -23,6 +23,7 @@ import {
 } from '@/src/data/cache/localProfilePhoto';
 import { ThemeMode, useTheme } from '@/src/theme/ThemeContext';
 import { getLocalAnimeLists } from '@/src/data/cache/localAnimeLists';
+import { exportLocalAnimeData } from '@/src/data/localAnimeExport';
 import {
   getOrCreateProfileStats,
   type ProfileStats,
@@ -36,14 +37,19 @@ const menuItems: {
   detail: string;
 }[] = [
   {
-    icon: 'notifications-outline',
-    title: 'Notificações',
-    detail: 'Lembretes e novidades',
+    icon: 'code-download-outline',
+    title: 'Extrair dados',
+    detail: 'Salve suas informações para reuso',
+  },
+  {
+    icon: 'code-slash-outline',
+    title: 'Importar dados',
+    detail: 'Importe informações de perfis anteriores',
   },
   {
     icon: 'shield-checkmark-outline',
-    title: 'Privacidade',
-    detail: 'Controle seus dados',
+    title: 'Detalhes da conta',
+    detail: 'Faça ajustes no seu perfil',
   },
   {
     icon: 'help-circle-outline',
@@ -63,6 +69,7 @@ export default function ProfileScreen() {
   const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
   const [isPhotoModalVisible, setIsPhotoModalVisible] = useState(false);
   const [isChangingPhoto, setIsChangingPhoto] = useState(false);
+  const [isExportingData, setIsExportingData] = useState(false);
   const photoSize = Math.min(screenWidth - 48, 420);
   const [profileStats, setProfileStats] = useState<ProfileStats | null>(() =>
     readProfileStatsCache(localName),
@@ -124,6 +131,62 @@ export default function ProfileScreen() {
   const handleSignOut = async () => {
     await signOut();
     router.replace('/(public)');
+  };
+
+  const exportUserData = async () => {
+    if (!isLocalAccount || !localName.trim()) {
+      Alert.alert(
+        'Exportação indisponível',
+        'A exportação local está disponível para perfis locais.',
+      );
+      return;
+    }
+
+    setIsExportingData(true);
+    try {
+      await exportLocalAnimeData(localName);
+      Alert.alert(
+        'Dados exportados',
+        `O arquivo ${localName}.json foi salvo na pasta Downloads.`,
+      );
+    } catch (error) {
+      Alert.alert(
+        'Não foi possível exportar os dados',
+        error instanceof Error
+          ? error.message
+          : 'Tente novamente e selecione a pasta Downloads.',
+      );
+    } finally {
+      setIsExportingData(false);
+    }
+  };
+
+  const openSupportDocumentation = async () => {
+    const documentationUrl =
+      'https://github.com/mathhen1/anikeeper/blob/main/mobile/README.md';
+
+    try {
+      await Linking.openURL(documentationUrl);
+    } catch {
+      Alert.alert(
+        'Não foi possível abrir o link',
+        'Verifique se há um navegador instalado no dispositivo.',
+      );
+    }
+  };
+
+  const handleMenuItemPress = (title: string) => {
+    if (title === 'Extrair dados') {
+      void exportUserData();
+      return;
+    }
+
+    if (title === 'Ajuda e suporte') {
+      void openSupportDocumentation();
+      return;
+    }
+
+    Alert.alert(title, 'Esta opção estará disponível em breve.');
   };
 
   const chooseTheme = (selectedMode: ThemeMode) => setMode(selectedMode);
@@ -236,7 +299,9 @@ export default function ProfileScreen() {
             </View>
           )}
         </Pressable>
-        <Text style={[styles.name, { color: colors.text }]}>{displayName}</Text>
+        <Text style={[styles.name, { color: colors.accent }]}>
+          {displayName.toUpperCase()}
+        </Text>
         <Text style={[styles.email, { color: colors.muted }]}>
           {isLocalAccount ? 'Dados salvos neste aparelho' : 'Conta oficial'}
         </Text>
@@ -381,9 +446,8 @@ export default function ProfileScreen() {
         {menuItems.map((item, index) => (
           <Pressable
             key={item.title}
-            onPress={() =>
-              Alert.alert(item.title, 'Esta opção estará disponível em breve.')
-            }
+            onPress={() => handleMenuItemPress(item.title)}
+            disabled={item.title === 'Extrair dados' && isExportingData}
             style={[
               styles.menuRow,
               index < menuItems.length - 1 && {
@@ -395,7 +459,11 @@ export default function ProfileScreen() {
             <View
               style={[styles.itemIcon, { backgroundColor: colors.elevated }]}
             >
-              <Ionicons name={item.icon} size={18} color={colors.muted} />
+              {item.title === 'Extrair dados' && isExportingData ? (
+                <ActivityIndicator size="small" color={colors.accent} />
+              ) : (
+                <Ionicons name={item.icon} size={18} color={colors.muted} />
+              )}
             </View>
             <View style={styles.settingCopy}>
               <Text style={[styles.itemTitle, { color: colors.text }]}>
@@ -415,7 +483,7 @@ export default function ProfileScreen() {
       >
         <Ionicons name="log-out-outline" size={17} color={colors.muted} />
         <Text style={[styles.logoutText, { color: colors.muted }]}>
-          Sair da sessão
+          Encerrar sessão
         </Text>
       </Pressable>
       <Text style={[styles.version, { color: colors.muted }]}>
