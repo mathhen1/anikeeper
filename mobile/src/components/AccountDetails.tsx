@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -13,6 +14,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useAuth } from '@/src/auth/AuthContext';
+import { clearLocalAnimeLists } from '@/src/data/cache/localAnimeLists';
 import { useTheme } from '@/src/theme/ThemeContext';
 
 type AccountDetailsProps = {
@@ -32,7 +34,14 @@ export function AccountDetails({
   onClose,
 }: AccountDetailsProps) {
   const { colors } = useTheme();
-  const { authMode, isAuthenticated, isReady } = useAuth();
+  const {
+    authMode,
+    deleteLocalAccount,
+    isAuthenticated,
+    isReady,
+    localName,
+    updateLocalName,
+  } = useAuth();
   const { width: screenWidth } = useWindowDimensions();
   const [isModalVisible, setIsModalVisible] = useState(visible);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
@@ -104,31 +113,99 @@ export function AccountDetails({
 
   const closeDrawer = () => onClose();
 
-  const saveUpdates = () => {
-    if (isLocalAccount && !editedUsername.trim()) {
+  const saveUpdates = async () => {
+    if (!isLocalAccount) {
+      Alert.alert(
+        'Indisponível no protótipo',
+        'As alterações da conta oficial estarão disponíveis quando o login oficial estiver implementado.',
+      );
+      return;
+    }
+
+    if (!editedUsername.trim()) {
       Alert.alert('Nome inválido', 'Informe um username para continuar.');
       return;
     }
 
-    Alert.alert(
-      'Protótipo',
-      'A edição e o salvamento dos dados da conta serão ativados em breve.',
-    );
+    try {
+      await updateLocalName(editedUsername);
+      setIsEditingUsername(false);
+      Alert.alert('Username atualizado', 'Seu novo username foi salvo.');
+    } catch (error) {
+      Alert.alert(
+        'Não foi possível atualizar o username',
+        error instanceof Error ? error.message : 'Tente novamente.',
+      );
+    }
   };
 
   const showDeleteDataConfirmation = () => {
+    if (!isLocalAccount) {
+      Alert.alert(
+        'Indisponível no protótipo',
+        'A exclusão dos dados oficiais estará disponível quando o backend for implementado.',
+      );
+      return;
+    }
+    if (!localName.trim()) {
+      Alert.alert('Sessão inválida', 'Entre novamente para continuar.');
+      return;
+    }
+
     Alert.alert(
       'Excluir dados da conta?',
-      'Esta ação estará disponível em uma próxima versão.',
-      [{ text: 'Entendi', style: 'cancel' }],
+      'Somente as listas de animes serão apagadas. Esta ação não pode ser desfeita.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir listas',
+          style: 'destructive',
+          onPress: () => {
+            void clearLocalAnimeLists(localName)
+              .then(() => {
+                Alert.alert('Listas excluídas', 'Suas listas foram apagadas.');
+              })
+              .catch((error: unknown) => {
+                Alert.alert(
+                  'Não foi possível excluir as listas',
+                  error instanceof Error ? error.message : 'Tente novamente.',
+                );
+              });
+          },
+        },
+      ],
     );
   };
 
   const showDeleteAccountConfirmation = () => {
+    if (!isLocalAccount) {
+      Alert.alert(
+        'Indisponível no protótipo',
+        'A exclusão da conta oficial estará disponível quando o backend for implementado.',
+      );
+      return;
+    }
+
     Alert.alert(
-      isLocalAccount ? 'Excluir conta local?' : 'Excluir conta oficial?',
-      'Esta ação estará disponível em uma próxima versão.',
-      [{ text: 'Entendi', style: 'cancel' }],
+      'Excluir conta local?',
+      'Sua conta, suas listas e sua foto de perfil serão apagadas deste aparelho. Esta ação não pode ser desfeita.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir conta',
+          style: 'destructive',
+          onPress: () => {
+            void deleteLocalAccount()
+              .then(() => router.replace('/(public)'))
+              .catch((error: unknown) => {
+                Alert.alert(
+                  'Não foi possível excluir a conta',
+                  error instanceof Error ? error.message : 'Tente novamente.',
+                );
+              });
+          },
+        },
+      ],
     );
   };
 

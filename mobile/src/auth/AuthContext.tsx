@@ -1,5 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { migrateLegacyLocalAnimeLists } from '@/src/data/cache/localAnimeLists';
+import {
+  deleteLocalAnimeLists,
+  migrateLegacyLocalAnimeLists,
+  renameLocalAnimeLists,
+} from '@/src/data/cache/localAnimeLists';
+import {
+  deleteLocalProfilePhoto,
+  renameLocalProfilePhoto,
+} from '@/src/data/cache/localProfilePhoto';
 import {
   createContext,
   PropsWithChildren,
@@ -15,6 +23,8 @@ type AuthContextValue = {
   isAuthenticated: boolean;
   isReady: boolean;
   localName: string;
+  updateLocalName: (newName: string) => Promise<void>;
+  deleteLocalAccount: () => Promise<void>;
   signInOfficial: (email: string) => Promise<void>;
   signInLocal: (name: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -88,6 +98,67 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setAuthMode('local');
   };
 
+  const updateLocalName = async (newName: string) => {
+    const normalizedName = newName.trim();
+    const currentName = localName.trim();
+
+    if (authMode !== 'local' || !currentName) {
+      throw new Error('Não foi possível identificar a sessão local atual.');
+    }
+    if (!normalizedName) {
+      throw new Error('Informe um username válido.');
+    }
+    if (normalizedName === currentName) return;
+
+    let didRenamePhoto = false;
+    let didRenameLists = false;
+
+    try {
+      await renameLocalProfilePhoto(currentName, normalizedName);
+      didRenamePhoto = true;
+      await renameLocalAnimeLists(currentName, normalizedName);
+      didRenameLists = true;
+      await AsyncStorage.setItem('anikeeper-local-name', normalizedName);
+    } catch (error) {
+      if (didRenameLists) {
+        await renameLocalAnimeLists(normalizedName, currentName).catch(
+          (rollbackError: unknown) => {
+            console.warn('Could not restore local anime lists after rename.', rollbackError);
+          },
+        );
+      }
+      if (didRenamePhoto) {
+        await renameLocalProfilePhoto(normalizedName, currentName).catch(
+          (rollbackError: unknown) => {
+            console.warn('Could not restore the profile photo after rename.', rollbackError);
+          },
+        );
+      }
+      throw error;
+    }
+
+    setLocalName(normalizedName);
+  };
+
+  const deleteLocalAccount = async () => {
+    const username = localName.trim();
+    if (authMode !== 'local' || !username) {
+      throw new Error('Não foi possível identificar a sessão local atual.');
+    }
+
+    await deleteLocalAnimeLists(username);
+    await deleteLocalProfilePhoto(username);
+    await AsyncStorage.multiRemove([
+      'anikeeper-auth',
+      'anikeeper-auth-mode',
+      'anikeeper-local-name',
+      'anikeeper-user',
+    ]);
+    setIsAuthenticated(false);
+    setAuthMode(null);
+    setLocalName('');
+  };
+
   const signOut = async () => {
     if (authMode === 'local' && localName.trim()) {
       await migrateLegacyLocalAnimeLists(localName);
@@ -109,6 +180,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
         isAuthenticated,
         isReady,
         localName,
+        updateLocalName,
+        deleteLocalAccount,
         signInOfficial,
         signInLocal,
         signOut,
