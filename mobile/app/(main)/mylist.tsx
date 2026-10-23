@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -31,10 +32,21 @@ export default function MyListScreen() {
     useState<(typeof localAnimeListOptions)[number]['key']>('completed');
   const [animeLists, setAnimeLists] =
     useState<LocalAnimeLists>(emptyLocalAnimeLists);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const currentList = localAnimeListOptions.find(
     (list) => list.key === selectedList,
   )!;
   const currentAnime = animeLists[selectedList];
+  const normalizedSearchQuery = debouncedSearchQuery.trim().toLowerCase();
+  const filteredAnime = currentAnime.filter((anime) => {
+    if (!normalizedSearchQuery) return true;
+
+    return (
+      anime.title.toLowerCase().includes(normalizedSearchQuery) ||
+      anime.originalTitle.toLowerCase().includes(normalizedSearchQuery)
+    );
+  });
   const gridGap = 8;
   const cardPadding = 8;
   const safeWindowWidth = windowWidth - insets.left - insets.right;
@@ -44,6 +56,19 @@ export default function MyListScreen() {
     (listWidth - gridGap * (columnCount - 1)) / columnCount;
   const artworkWidth = cardWidth - cardPadding * 2;
   const artworkHeight = artworkWidth * 1.35;
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setSearchQuery('');
+    setDebouncedSearchQuery('');
+  }, [selectedList]);
 
   useFocusEffect(
     useCallback(() => {
@@ -178,6 +203,35 @@ export default function MyListScreen() {
           </Text>
         </Pressable>
       </View>
+      {currentAnime.length > 0 ? (
+        <View
+          style={[
+            styles.searchField,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
+          <Ionicons name="search" size={18} color={colors.muted} />
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={`Buscar em ${currentList.label.toLowerCase()}...`}
+            placeholderTextColor={colors.muted}
+            returnKeyType="search"
+            accessibilityLabel={`Buscar animes em ${currentList.label}`}
+            style={[styles.searchInput, { color: colors.text }]}
+          />
+          {searchQuery.length > 0 ? (
+            <Pressable
+              onPress={() => setSearchQuery('')}
+              accessibilityRole="button"
+              accessibilityLabel="Limpar pesquisa"
+              hitSlop={8}
+            >
+              <Ionicons name="close-circle" size={18} color={colors.muted} />
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
       {currentAnime.length === 0 ? (
         <View
           style={[
@@ -191,48 +245,64 @@ export default function MyListScreen() {
           </Text>
         </View>
       ) : (
-        <View style={styles.animeGrid}>
-          {currentAnime.map((anime) => (
-            <Pressable
-              key={anime.id}
-              onPress={() =>
-                router.push({
-                  pathname: '/(main)/anime/[id]',
-                  params: { id: anime.id },
-                })
-              }
-              style={[
-                styles.animeCard,
-                {
-                  width: cardWidth,
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                  padding: cardPadding,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Abrir ${anime.title}`}
-            >
-              <AnimeArtwork
-                anime={anime}
-                width={artworkWidth}
-                height={artworkHeight}
-              />
-              <Text
-                numberOfLines={2}
-                style={[styles.animeTitle, { color: colors.text }]}
+        filteredAnime.length > 0 ? (
+          <View style={styles.animeGrid}>
+            {filteredAnime.map((anime) => (
+              <Pressable
+                key={anime.id}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(main)/anime/[id]',
+                    params: { id: anime.id },
+                  })
+                }
+                style={[
+                  styles.animeCard,
+                  {
+                    width: cardWidth,
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                    padding: cardPadding,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Abrir ${anime.title}`}
               >
-                {anime.title}
-              </Text>
-              <View style={styles.animeRating}>
-                <Ionicons name="star" size={12} color="#F1C66A" />
-                <Text style={[styles.animeRatingText, { color: colors.muted }]}>
-                  {anime.rating}
+                <AnimeArtwork
+                  anime={anime}
+                  width={artworkWidth}
+                  height={artworkHeight}
+                />
+                <Text
+                  numberOfLines={2}
+                  style={[styles.animeTitle, { color: colors.text }]}
+                >
+                  {anime.title}
                 </Text>
-              </View>
-            </Pressable>
-          ))}
-        </View>
+                <View style={styles.animeRating}>
+                  <Ionicons name="star" size={12} color="#F1C66A" />
+                  <Text
+                    style={[styles.animeRatingText, { color: colors.muted }]}
+                  >
+                    {anime.rating}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        ) : (
+          <View
+            style={[
+              styles.emptyList,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            <Ionicons name="search-outline" size={22} color={colors.muted} />
+            <Text style={[styles.emptyListText, { color: colors.muted }]}>
+              Nenhum anime encontrado nesta lista.
+            </Text>
+          </View>
+        )
       )}
       <View style={{ height: 18 }} />
     </Screen>
@@ -294,6 +364,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   listTitle: { fontSize: 15, fontWeight: '700' },
+  searchField: {
+    minHeight: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderRadius: 14,
+  },
+  searchInput: { flex: 1, paddingVertical: 10, fontSize: 13 },
   sort: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   sortText: { fontSize: 11 },
   emptyList: {
