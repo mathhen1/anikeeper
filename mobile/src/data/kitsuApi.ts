@@ -138,10 +138,12 @@ export async function searchAnime(
 async function getTopAnime(
   sort: string,
   signal: AbortSignal,
+  offset = 0,
 ): Promise<AnimeInfo[]> {
   const searchParams = new URLSearchParams({
     sort,
     'page[limit]': '8',
+    'page[offset]': String(offset),
   });
 
   const response = await requestKitsu<KitsuSearchResponse>(
@@ -153,16 +155,23 @@ async function getTopAnime(
 
 export function getMostFavoritedAnime(
   signal: AbortSignal,
+  offset = 0,
 ): Promise<AnimeInfo[]> {
-  return getTopAnime('-favoritesCount', signal);
+  return getTopAnime('-favoritesCount', signal, offset);
 }
 
-export function getTopRatedAnime(signal: AbortSignal): Promise<AnimeInfo[]> {
-  return getTopAnime('-averageRating', signal);
+export function getTopRatedAnime(
+  signal: AbortSignal,
+  offset = 0,
+): Promise<AnimeInfo[]> {
+  return getTopAnime('-averageRating', signal, offset);
 }
 
-export function getMostPopularAnime(signal: AbortSignal): Promise<AnimeInfo[]> {
-  return getTopAnime('popularityRank', signal);
+export function getMostPopularAnime(
+  signal: AbortSignal,
+  offset = 0,
+): Promise<AnimeInfo[]> {
+  return getTopAnime('popularityRank', signal, offset);
 }
 
 export async function getAnimeById(

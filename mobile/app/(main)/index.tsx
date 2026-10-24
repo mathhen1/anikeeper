@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -49,19 +49,61 @@ const collectionLists = [
 type AnimeRecommendationState = {
   items: AnimeInfo[];
   isLoading: boolean;
+  isLoadingMore: boolean;
+  hasMore: boolean;
   error: string;
+  loadMoreError: string;
 };
+
+async function loadNextRecommendationPage(
+  recommendation: AnimeRecommendationState,
+  setRecommendation: Dispatch<SetStateAction<AnimeRecommendationState>>,
+  fetchPage: (signal: AbortSignal, offset: number) => Promise<AnimeInfo[]>,
+) {
+  if (recommendation.isLoadingMore || !recommendation.hasMore) return;
+
+  setRecommendation((current) => ({
+    ...current,
+    isLoadingMore: true,
+    loadMoreError: '',
+  }));
+
+  try {
+    const nextItems = await fetchPage(
+      new AbortController().signal,
+      recommendation.items.length,
+    );
+
+    setRecommendation((current) => ({
+      ...current,
+      items: [...current.items, ...nextItems],
+      isLoadingMore: false,
+      hasMore: nextItems.length === 8,
+    }));
+  } catch (error: unknown) {
+    setRecommendation((current) => ({
+      ...current,
+      isLoadingMore: false,
+      loadMoreError:
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível carregar mais animes.',
+    }));
+  }
+}
 
 function AnimeRecommendationSection({
   title,
   subtitle,
   icon,
   recommendation,
+  onLoadMore,
 }: {
   title: string;
   subtitle: string;
   icon: 'heart-outline' | 'star-outline' | 'trending-up-outline';
   recommendation: AnimeRecommendationState;
+  onLoadMore: () => void;
 }) {
   const { colors } = useTheme();
 
@@ -164,8 +206,43 @@ function AnimeRecommendationSection({
               </View>
             </Pressable>
           ))}
+          {recommendation.hasMore && (
+            <Pressable
+              onPress={onLoadMore}
+              disabled={recommendation.isLoadingMore}
+              style={({ pressed }) => [
+                styles.loadMoreButton,
+                {
+                  opacity: pressed || recommendation.isLoadingMore ? 0.55 : 1,
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={
+                recommendation.isLoadingMore
+                  ? 'Carregando mais animes'
+                  : recommendation.loadMoreError
+                    ? 'Tentar carregar mais animes novamente'
+                    : 'Carregar mais animes'
+              }
+            >
+              {recommendation.isLoadingMore ? (
+                <ActivityIndicator size="small" color={colors.accent} />
+              ) : (
+                <Ionicons
+                  name="chevron-forward"
+                  size={25}
+                  color={colors.accent}
+                />
+              )}
+            </Pressable>
+          )}
         </ScrollView>
       )}
+      {recommendation.loadMoreError ? (
+        <Text style={[styles.loadMoreError, { color: colors.muted }]}>
+          {recommendation.loadMoreError}
+        </Text>
+      ) : null}
     </>
   );
 }
@@ -176,60 +253,96 @@ export default function HomeScreen() {
   const [mostFavorited, setMostFavorited] = useState<AnimeRecommendationState>({
     items: [],
     isLoading: true,
+    isLoadingMore: false,
+    hasMore: true,
     error: '',
+    loadMoreError: '',
   });
   const [topRated, setTopRated] = useState<AnimeRecommendationState>({
     items: [],
     isLoading: true,
+    isLoadingMore: false,
+    hasMore: true,
     error: '',
+    loadMoreError: '',
   });
   const [mostPopular, setMostPopular] = useState<AnimeRecommendationState>({
     items: [],
     isLoading: true,
+    isLoadingMore: false,
+    hasMore: true,
     error: '',
+    loadMoreError: '',
   });
   useEffect(() => {
     const controller = new AbortController();
 
     getMostFavoritedAnime(controller.signal)
-      .then((items) => setMostFavorited({ items, isLoading: false, error: '' }))
+      .then((items) => setMostFavorited((current) => ({
+        ...current,
+        items,
+        isLoading: false,
+        hasMore: items.length === 8,
+        error: '',
+      })))
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
         setMostFavorited({
           items: [],
           isLoading: false,
+          isLoadingMore: false,
+          hasMore: false,
           error:
             error instanceof Error
               ? error.message
               : 'Não foi possível carregar os favoritos.',
+          loadMoreError: '',
         });
       });
 
     getTopRatedAnime(controller.signal)
-      .then((items) => setTopRated({ items, isLoading: false, error: '' }))
+      .then((items) => setTopRated((current) => ({
+        ...current,
+        items,
+        isLoading: false,
+        hasMore: items.length === 8,
+        error: '',
+      })))
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
         setTopRated({
           items: [],
           isLoading: false,
+          isLoadingMore: false,
+          hasMore: false,
           error:
             error instanceof Error
               ? error.message
               : 'Não foi possível carregar os mais bem avaliados.',
+          loadMoreError: '',
         });
       });
 
     getMostPopularAnime(controller.signal)
-      .then((items) => setMostPopular({ items, isLoading: false, error: '' }))
+      .then((items) => setMostPopular((current) => ({
+        ...current,
+        items,
+        isLoading: false,
+        hasMore: items.length === 8,
+        error: '',
+      })))
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
         setMostPopular({
           items: [],
           isLoading: false,
+          isLoadingMore: false,
+          hasMore: false,
           error:
             error instanceof Error
               ? error.message
               : 'Não foi possível carregar os populares.',
+          loadMoreError: '',
         });
       });
 
@@ -281,18 +394,41 @@ export default function HomeScreen() {
         subtitle="Os mais favoritados na Kitsu"
         icon="heart-outline"
         recommendation={mostFavorited}
+        onLoadMore={() =>
+          loadNextRecommendationPage(
+            mostFavorited,
+            setMostFavorited,
+            getMostFavoritedAnime,
+          )
+        }
+      />
+      <View
+        style={[styles.sectionDivider, { backgroundColor: colors.border }]}
       />
       <AnimeRecommendationSection
         title="Mais bem avaliados"
         subtitle="As maiores notas na Kitsu"
         icon="star-outline"
         recommendation={topRated}
+        onLoadMore={() =>
+          loadNextRecommendationPage(topRated, setTopRated, getTopRatedAnime)
+        }
+      />
+      <View
+        style={[styles.sectionDivider, { backgroundColor: colors.border }]}
       />
       <AnimeRecommendationSection
         title="Mais populares"
         subtitle="Os animes mais acompanhados"
         icon="trending-up-outline"
         recommendation={mostPopular}
+        onLoadMore={() =>
+          loadNextRecommendationPage(
+            mostPopular,
+            setMostPopular,
+            getMostPopularAnime,
+          )
+        }
       />
       <View style={{ height: 18 }} />
     </Screen>
@@ -352,6 +488,20 @@ const styles = StyleSheet.create({
   recommendationsStatusText: { flexShrink: 1, fontSize: 11, lineHeight: 17 },
   recommendationsRow: { gap: 12, paddingRight: 2 },
   recommendationCard: { width: 108, gap: 7 },
+  sectionDivider: {
+    height: 1,
+    marginTop: 24,
+    opacity: 0.45,
+  },
+  loadMoreButton: {
+    width: 42,
+    height: 44,
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 48,
+  },
+  loadMoreError: { fontSize: 10, marginTop: 7 },
   recommendationTitle: {
     minHeight: 32,
     fontSize: 11,
