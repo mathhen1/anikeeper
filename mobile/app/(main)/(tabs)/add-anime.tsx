@@ -109,17 +109,23 @@ export default function AddAnimeScreen() {
     };
   }, [query]);
 
-  const openAnime = async (anime: AnimeInfo) => {
+  const openAnime = (anime: AnimeInfo) => {
     const nextHistory = [
       anime,
       ...history.filter((recentAnime) => recentAnime.id !== anime.id),
     ].slice(0, 6);
+
     setHistory(nextHistory);
-    await AsyncStorage.setItem(
+
+    router.push({
+      pathname: '/(main)/anime/[id]',
+      params: { id: anime.id },
+    });
+
+    void AsyncStorage.setItem(
       searchHistoryStorageKey,
       JSON.stringify(nextHistory),
     ).catch(() => undefined);
-    router.push({ pathname: '/(main)/anime/[id]', params: { id: anime.id } });
   };
 
   const clearHistory = async () => {
