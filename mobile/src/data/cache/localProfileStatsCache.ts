@@ -119,7 +119,7 @@ export function updateProfileStatsCache(
   try {
     const cacheFile = getCacheFile(username);
     if (!cacheFile.exists) cacheFile.create();
-    cacheFile.write(JSON.stringify(stats));
+    cacheFile.writeSync(JSON.stringify(stats));
   } catch (error: unknown) {
     // List data remains the source of truth if the disposable cache fails.
     console.warn('Could not write the profile stats cache.', error);

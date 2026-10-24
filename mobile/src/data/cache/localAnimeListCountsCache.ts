@@ -98,7 +98,7 @@ export function updateLocalAnimeListCountsCache(
   try {
     const cacheFile = getCacheFile(username);
     if (!cacheFile.exists) cacheFile.create();
-    cacheFile.write(JSON.stringify(counts));
+    cacheFile.writeSync(JSON.stringify(counts));
   } catch (error: unknown) {
     console.warn('Could not write the anime list counts cache.', error);
   }
