@@ -29,7 +29,6 @@ export default function MainLayout() {
 
   return (
     <Tabs
-      initialRouteName="index"
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
@@ -51,7 +50,11 @@ export default function MainLayout() {
         options={{
           title: 'Início',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" color={color} size={size} />
+            <Ionicons
+              name="home-outline"
+              color={typeof color === 'string' ? color : colors.accent}
+              size={size}
+            />
           ),
         }}
       />
@@ -60,7 +63,11 @@ export default function MainLayout() {
         options={{
           title: 'Minha lista',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="albums-outline" color={color} size={size} />
+            <Ionicons
+              name="albums-outline"
+              color={typeof color === 'string' ? color : colors.accent}
+              size={size}
+            />
           ),
         }}
       />
@@ -69,7 +76,11 @@ export default function MainLayout() {
         options={{
           title: 'Adicionar anime',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="search-outline" color={color} size={size} />
+            <Ionicons
+              name="search-outline"
+              color={typeof color === 'string' ? color : colors.accent}
+              size={size}
+            />
           ),
         }}
       />
@@ -78,7 +89,11 @@ export default function MainLayout() {
         options={{
           title: 'Perfil',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-circle-outline" color={color} size={size} />
+            <Ionicons
+              name="person-circle-outline"
+              color={typeof color === 'string' ? color : colors.accent}
+              size={size}
+            />
           ),
         }}
       />

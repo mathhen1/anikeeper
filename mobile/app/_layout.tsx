@@ -12,7 +12,6 @@ function RootNavigator() {
     <>
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
       <Stack
-        initialRouteName="(public)"
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: colors.background },
