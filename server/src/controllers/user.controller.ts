@@ -1,5 +1,4 @@
 import type { Request, Response } from 'express';
-import sharp from 'sharp';
 import { z } from 'zod';
 import { ApiError } from '../lib/api-error.js';
 import {
@@ -64,18 +63,11 @@ export async function exportAnimeLists(request: Request, response: Response) {
 export async function uploadProfilePhoto(request: Request, response: Response) {
   if (!request.file) throw new ApiError(400, 'A profile photo file is required.');
 
-  let normalizedImage: Buffer;
-  try {
-    normalizedImage = await sharp(request.file.buffer)
-      .rotate()
-      .resize(512, 512, { fit: 'inside', withoutEnlargement: true })
-      .jpeg({ quality: 85 })
-      .toBuffer();
-  } catch {
-    throw new ApiError(400, 'The uploaded file is not a valid image.');
-  }
-
-  await saveProfilePhoto(getUserId(request), normalizedImage, 'image/jpeg');
+  await saveProfilePhoto(
+    getUserId(request),
+    request.file.buffer,
+    'image/webp',
+  );
   response.status(204).end();
 }
 
