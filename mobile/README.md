@@ -1,127 +1,110 @@
-# AniKeeper
+# AniKeeper Mobile
 
-**Organize sua jornada pelos animes em um só lugar.**
+Aplicativo Android para descobrir animes e organizar uma coleção pessoal. O app é feito com React Native, Expo e TypeScript, usando o Expo Router para navegação.
 
-AniKeeper é um aplicativo mobile para descobrir animes e manter uma coleção pessoal organizada. O protótipo é desenvolvido com React Native, Expo e TypeScript, com foco atual em Android.
+## Funcionalidades
 
-## O que o app oferece
-
-- **Início:** recomendações da Kitsu separadas em favoritos, mais bem avaliados e mais populares, com carregamento inicial de oito títulos e paginação horizontal.
-- **Minha lista:** coleção dividida em animes concluídos, assistindo atualmente e planejo assistir. É possível pesquisar localmente na lista selecionada.
-- **Adicionar anime:** pesquisa por nome na Kitsu, com histórico de títulos consultados.
-- **Detalhes do anime:** informações do título e ações para adicioná-lo a uma das três listas ou removê-lo da coleção.
-- **Perfil:** resumo da coleção, tema claro ou escuro, foto de perfil, exportação dos dados locais e opções de gerenciamento do perfil.
-
-## Estado atual do projeto
-
-O modo local está funcional para organizar a coleção neste dispositivo. As listas, o nome do perfil e as preferências locais são mantidos no armazenamento do aparelho. As listas são associadas ao username local, permitindo alternar entre perfis locais.
-
-O cadastro e o login oficiais usam o backend AniKeeper para validar username e senha. O token JWT fica no `expo-secure-store` e é validado no servidor ao reabrir o app. As listas do modo oficial ainda não foram conectadas à nuvem.
+- **Início:** recomendações da Kitsu por favoritos, avaliação e popularidade; cada faixa começa com oito títulos e permite carregar mais resultados.
+- **Minha lista:** listas de animes concluídos, assistindo atualmente e planejados, com busca e paginação.
+- **Adicionar anime:** busca de títulos na Kitsu e histórico de pesquisas.
+- **Detalhes do anime:** informações do título e ações para adicionar a uma lista ou removê-lo da coleção.
+- **Perfil:** estatísticas aproximadas, foto, tema claro/escuro, exportação das listas e gerenciamento da conta.
+- **Conta local:** mantém listas, username e foto no dispositivo, separados por username.
+- **Conta oficial:** autenticação com o backend AniKeeper e sincronização de listas, perfil e foto com o servidor.
 
 ## Tecnologias
 
-- React Native e Expo
-- Expo Router para navegação por arquivos, grupos de rotas públicas e protegidas
-- TypeScript
-- Expo SQLite KV Store para dados locais
-- Expo SecureStore para o token JWT da sessão oficial
-- Expo FileSystem para arquivos e caches locais
-- Expo ImagePicker para escolher a foto de perfil
-- Expo Screen Orientation e React Native Safe Area Context para orientação e áreas seguras
-- Kitsu API para pesquisa e recomendações de animes
+- Expo SDK 58, React Native 0.88 e React 19
+- TypeScript e Expo Router
+- Expo SQLite KV Store para persistência local
+- Expo SecureStore para o token JWT de contas oficiais
+- Expo FileSystem para cache local de estatísticas e fotos
+- Expo ImagePicker, Expo Screen Orientation e React Native Safe Area Context
+- Kitsu API para pesquisa, detalhes e recomendações de animes
 
 ## Requisitos
 
-- Node.js e npm
-- Android Studio com Android SDK e um emulador configurado, ou um dispositivo Android
-- Expo Go para executar no dispositivo, quando compatível com as dependências nativas utilizadas
+- Node.js 24.22.1 ou superior e npm
+- Android Studio com Android SDK e emulador configurado, ou dispositivo Android
+- Expo Go compatível com o SDK do projeto; para dependências nativas incompatíveis com Expo Go, use um development build
+- Backend AniKeeper em execução para cadastro, login e recursos de contas oficiais
 
 ## Instalação e execução
-
-No terminal, entre na pasta `mobile` e instale as dependências:
 
 ```bash
 cd mobile
 npm install
 ```
 
-Configure a URL do backend copiando `.env.example` para `.env`. O valor de exemplo usa o endereço do computador anfitrião visto pelo emulador Android (`10.0.2.2`). Em um aparelho físico, substitua-o pelo endereço IP local do computador que executa o servidor:
+Configure a URL do backend usando o arquivo de exemplo:
+
+```bash
+cp .env.example .env
+```
+
+O `.env.example` usa `http://10.0.2.2:1414/api`, endereço do computador anfitrião visto pelo emulador Android padrão. Em dispositivo físico, use o IPv4 local do computador que executa o servidor, por exemplo `http://192.168.0.25:1414/api`. O celular e o computador precisam estar na mesma rede, e o firewall deve permitir conexões na porta do servidor.
 
 ```env
 EXPO_PUBLIC_API_URL=http://10.0.2.2:1414/api
 ```
 
-O backend também precisa estar em execução na porta configurada. Reinicie o Expo depois de alterar as variáveis `EXPO_PUBLIC_`.
-
-Inicie o projeto no Android:
+Depois de alterar variáveis `EXPO_PUBLIC_`, reinicie o Expo. Inicie o app com:
 
 ```bash
 npm run android
 ```
 
-Para iniciar o servidor do Expo sem abrir automaticamente o Android:
+Ou inicie o servidor do Expo e abra o projeto pelo Expo Go:
 
 ```bash
 npm start
 ```
 
-O Android SDK precisa estar instalado e configurado para executar no emulador. Também é possível abrir o projeto em um dispositivo Android pelo Expo Go, respeitando a compatibilidade das bibliotecas nativas instaladas.
-
-## Comandos disponíveis
+## Comandos
 
 | Comando | Descrição |
 | --- | --- |
-| `npm start` | Inicia o servidor de desenvolvimento Expo. |
-| `npm run android` | Inicia o Expo e abre o projeto no Android. |
-| `npm run ios` | Inicia o projeto no simulador iOS, quando disponível. |
+| `npm start` | Inicia o servidor de desenvolvimento do Expo. |
+| `npm run android` | Inicia o Expo e tenta abrir o app no Android. |
+| `npm run ios` | Inicia o app no simulador iOS, se disponível. |
 | `npm run web` | Inicia a versão web do Expo. |
-| `npm run typecheck` | Executa a verificação de tipos do TypeScript. |
+| `npm run typecheck` | Verifica os tipos TypeScript sem gerar arquivos. |
 
-## Navegação
+## Navegação e autenticação
 
-As rotas estão organizadas pelo Expo Router em `app/`:
+As rotas estão em `app/` e são organizadas pelo Expo Router:
 
-| Grupo | Rotas | Acesso |
+| Grupo | Conteúdo | Acesso |
 | --- | --- | --- |
-| `(public)` | Boas-vindas, login, login local e cadastro | Usuários sem sessão |
-| `(main)` | Início, minha lista, adicionar anime, perfil e detalhes do anime | Usuários autenticados no app |
+| `(public)` | Boas-vindas, cadastro oficial, login oficial e entrada local | Sem sessão ativa |
+| `(main)` | Início, minha lista, pesquisa, perfil e detalhes de anime | Sessão ativa |
 
-O layout raiz inicializa os provedores de tema, autenticação, área segura e orientação. O grupo `(main)` verifica a sessão antes de exibir as telas principais.
+O `AuthContext` distingue sessões locais e oficiais. O token oficial é salvo no SecureStore e carregado para a memória durante a execução. Chamadas autenticadas usam `EXPO_PUBLIC_API_URL`; respostas 401 encerram a sessão e pedem nova autenticação.
 
-## Dados locais e privacidade
+## Armazenamento
 
-- As listas são salvas no Expo SQLite KV Store e separadas pelo username local.
-- A foto de perfil local é escolhida na galeria após a solicitação de permissão e armazenada no dispositivo.
-- O perfil permite exportar os nomes dos animes das listas locais em um arquivo TXT.
-- As opções de gerenciamento permitem renomear o perfil local, limpar suas listas ou excluir o perfil e seus dados associados.
-- A opção de apagar todos os dados do dispositivo fica disponível na entrada do modo local.
-- Os caches de estatísticas e contagens evitam recalcular os resumos a cada navegação.
+- As listas e preferências locais usam o SQLite KV Store do Expo e ficam separadas pelo username local.
+- A foto local é selecionada pela galeria após solicitação de permissão.
+- Caches de contagens, estatísticas e fotos são mantidos no dispositivo com Expo FileSystem.
+- Contas oficiais buscam e alteram os dados remotos no backend; os caches visuais continuam locais e identificados pelo ID da conta.
+- A exportação cria um arquivo TXT com os nomes dos animes das listas. Para contas oficiais, o conteúdo vem do backend.
+- O app oferece ações para limpar listas ou apagar a conta, respeitando o tipo de sessão.
 
 ## API de animes
 
-O AniKeeper consulta a Kitsu API em https://kitsu.io/api/edge sem chave de API. A tela de pesquisa consulta títulos por nome e a tela inicial apresenta listas recomendadas ordenadas por favoritos, avaliação e popularidade. A disponibilidade das consultas depende da conexão com a internet e do serviço da Kitsu.
+Pesquisa, detalhes e recomendações usam a API pública da Kitsu em `https://kitsu.io/api/edge`, sem chave de API. O backend recebe as informações de anime selecionadas pelo usuário e as associa às listas da conta oficial. A busca e recomendações dependem de conexão com a internet e disponibilidade da Kitsu.
 
-## Estrutura do projeto
+## Estrutura
 
 ```text
 mobile/
-|-- app/
-|   |-- (public)/       # Boas-vindas e acesso
-|   |-- (main)/         # Área principal autenticada
-|   `-- _layout.tsx     # Provedores e navegação raiz
-|-- src/
-|   |-- auth/           # Estado da sessão
-|   |-- components/     # Componentes reutilizáveis
-|   |-- data/           # Integração com Kitsu e exportação
-|   |   `-- cache/      # Persistência e caches locais
-|   |-- orientation/    # Estado da orientação do dispositivo
-|   |-- theme/          # Tema claro e escuro
-|   `-- types/          # Tipos compartilhados
-|-- app.json
-|-- package.json
-`-- tsconfig.json
+├── app/                 # Rotas públicas e área principal autenticada
+├── src/auth/            # Estado de autenticação e token de sessão
+├── src/components/      # Componentes compartilhados
+├── src/data/            # Kitsu, API oficial, exportação e caches
+├── src/orientation/     # Estado de orientação do dispositivo
+├── src/theme/           # Temas claro e escuro
+└── src/types/           # Tipos compartilhados
 ```
 
-## Próximos passos
-
-O projeto está sendo construído gradualmente. A integração de contas oficiais, backend e sincronização entre dispositivos ainda será definida e implementada.
+Consulte o [README geral](../README.md) para a visão do projeto completo e o [README do servidor](../server/README.md) para configurar a API.
