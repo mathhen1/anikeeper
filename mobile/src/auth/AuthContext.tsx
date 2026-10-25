@@ -5,15 +5,23 @@ import {
   renameLocalAnimeLists,
 } from '@/src/data/cache/localAnimeLists';
 import {
+  clearProfilePhotoCache,
   deleteLocalProfilePhoto,
   renameLocalProfilePhoto,
 } from '@/src/data/cache/localProfilePhoto';
+import { updateLocalAnimeListCountsCache } from '@/src/data/cache/localAnimeListCountsCache';
+import { updateProfileStatsValueCache } from '@/src/data/cache/localProfileStatsCache';
 import {
-  AuthApiError,
+  ApiClientError,
   getOfficialAccount,
   loginOfficialAccount,
   registerOfficialAccount,
 } from '@/src/auth/authApi';
+import {
+  deleteOfficialAccount as deleteOfficialAccountRequest,
+  updateOfficialUsername as updateOfficialUsernameRequest,
+} from '@/src/data/officialApi';
+import { setUnauthorizedHandler } from '@/src/data/apiClient';
 import {
   clearStoredAccessToken,
   getStoredAccessToken,
@@ -36,11 +44,14 @@ type AuthContextValue = {
   requiresReauthentication: boolean;
   localName: string;
   officialUsername: string;
+  officialUserId: string;
   accessToken: string | null;
   updateLocalName: (newName: string) => Promise<void>;
   deleteLocalAccount: () => Promise<void>;
   loginOfficial: (username: string, password: string) => Promise<void>;
   registerOfficial: (username: string, password: string) => Promise<void>;
+  updateOfficialUsername: (username: string) => Promise<void>;
+  deleteOfficialAccount: () => Promise<void>;
   signInLocal: (name: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -51,12 +62,13 @@ const authStorageKeys = [
   'anikeeper-auth-mode',
   'anikeeper-local-name',
   'anikeeper-official-username',
+  'anikeeper-official-user-id',
   'anikeeper-user',
 ];
 
 function isInvalidAccessToken(error: unknown): boolean {
   return (
-    error instanceof AuthApiError &&
+    error instanceof ApiClientError &&
     (error.statusCode === 401 || error.statusCode === 404)
   );
 }
@@ -69,6 +81,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [authMode, setAuthMode] = useState<AuthMode>(null);
   const [localName, setLocalName] = useState('');
   const [officialUsername, setOfficialUsername] = useState('');
+  const [officialUserId, setOfficialUserId] = useState('');
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
   useEffect(() => {
@@ -110,10 +123,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
               'anikeeper-official-username',
               account.username,
             );
+            await AsyncStorage.setItem('anikeeper-official-user-id', account.id);
             if (isActive) {
               setIsAuthenticated(true);
               setAuthMode('official');
               setOfficialUsername(account.username);
+              setOfficialUserId(account.id);
               setAccessToken(savedToken);
             }
           } catch (error: unknown) {
@@ -127,6 +142,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
             const cachedUsername = await AsyncStorage.getItem(
               'anikeeper-official-username',
             );
+            const cachedUserId = await AsyncStorage.getItem(
+              'anikeeper-official-user-id',
+            );
             console.warn(
               'Could not validate the saved session. Keeping it until the API is available.',
               error,
@@ -135,6 +153,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
               setIsAuthenticated(true);
               setAuthMode('official');
               setOfficialUsername(cachedUsername ?? '');
+              setOfficialUserId(cachedUserId ?? '');
               setAccessToken(savedToken);
             }
           }
@@ -159,6 +178,29 @@ export function AuthProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      void (async () => {
+        try {
+          await clearStoredAccessToken();
+          await AsyncStorage.multiRemove(authStorageKeys);
+        } catch (error: unknown) {
+          console.warn('Could not clear an invalid official session.', error);
+        } finally {
+          setIsAuthenticated(false);
+          setAuthMode(null);
+          setLocalName('');
+          setOfficialUsername('');
+          setOfficialUserId('');
+          setAccessToken(null);
+          setRequiresReauthentication(true);
+        }
+      })();
+    });
+
+    return () => setUnauthorizedHandler(null);
+  }, []);
+
   const saveOfficialSession = async (
     username: string,
     password: string,
@@ -176,6 +218,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         ['anikeeper-auth', 'true'],
         ['anikeeper-auth-mode', 'official'],
         ['anikeeper-official-username', response.user.username],
+        ['anikeeper-official-user-id', response.user.id],
       ]);
       await AsyncStorage.multiRemove([
         'anikeeper-local-name',
@@ -188,6 +231,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     setLocalName('');
     setOfficialUsername(response.user.username);
+    setOfficialUserId(response.user.id);
     setAccessToken(response.accessToken);
     setRequiresReauthentication(false);
     setIsAuthenticated(true);
@@ -218,6 +262,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     await AsyncStorage.setItem('anikeeper-auth', 'true');
     setLocalName(normalizedName);
     setOfficialUsername('');
+    setOfficialUserId('');
     setAccessToken(null);
     setRequiresReauthentication(false);
     setIsAuthenticated(true);
@@ -282,6 +327,56 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setAuthMode(null);
     setLocalName('');
     setOfficialUsername('');
+    setOfficialUserId('');
+    setAccessToken(null);
+    setRequiresReauthentication(false);
+  };
+
+  const updateOfficialUsername = async (newUsername: string) => {
+    const normalizedUsername = newUsername.trim();
+    if (authMode !== 'official' || !accessToken) {
+      throw new Error('Não foi possível validar a conta oficial atual.');
+    }
+    if (!normalizedUsername) throw new Error('Informe um username válido.');
+
+    const updatedUser = await updateOfficialUsernameRequest(
+      accessToken,
+      normalizedUsername,
+    );
+    await AsyncStorage.setItem(
+      'anikeeper-official-username',
+      updatedUser.username,
+    );
+    setOfficialUsername(updatedUser.username);
+  };
+
+  const deleteOfficialAccount = async () => {
+    if (authMode !== 'official' || !accessToken) {
+      throw new Error('Não foi possível validar a conta oficial atual.');
+    }
+
+    await deleteOfficialAccountRequest(accessToken);
+    const cacheKey = `official:${officialUserId}`;
+    clearProfilePhotoCache(cacheKey);
+    updateLocalAnimeListCountsCache(cacheKey, {
+      completed: 0,
+      watching: 0,
+      planned: 0,
+    });
+    updateProfileStatsValueCache(cacheKey, {
+      completedAnimeCount: 0,
+      completedEpisodeCount: 0,
+      watchedHours: 0,
+    });
+    await clearStoredAccessToken().catch((error: unknown) => {
+      console.warn('Could not remove the deleted account token.', error);
+    });
+    await AsyncStorage.multiRemove(authStorageKeys);
+    setIsAuthenticated(false);
+    setAuthMode(null);
+    setLocalName('');
+    setOfficialUsername('');
+    setOfficialUserId('');
     setAccessToken(null);
     setRequiresReauthentication(false);
   };
@@ -298,6 +393,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setAuthMode(null);
     setLocalName('');
     setOfficialUsername('');
+    setOfficialUserId('');
     setAccessToken(null);
     setRequiresReauthentication(false);
   };
@@ -311,11 +407,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
         requiresReauthentication,
         localName,
         officialUsername,
+        officialUserId,
         accessToken,
         updateLocalName,
         deleteLocalAccount,
         loginOfficial,
         registerOfficial,
+        updateOfficialUsername,
+        deleteOfficialAccount,
         signInLocal,
         signOut,
       }}
