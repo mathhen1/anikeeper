@@ -25,7 +25,8 @@
           "initialOrientation": "DEFAULT"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-secure-store"
     ]
   }
 }
