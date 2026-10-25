@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   StyleSheet,
@@ -15,26 +16,49 @@ import { useAuth } from '@/src/auth/AuthContext';
 
 export default function RegisterScreen() {
   const { colors } = useTheme();
-  const { signInOfficial } = useAuth();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const { registerOfficial } = useAuth();
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const createAccount = async () => {
-    if (!name.trim() || !email.trim() || password.trim().length < 6)
+    const normalizedUsername = username.trim();
+    if (normalizedUsername.length < 3 || normalizedUsername.length > 20)
       return Alert.alert(
         'Confira seus dados',
-        'Preencha todos os campos e use uma senha com pelo menos 6 caracteres.',
+        'O username deve ter entre 3 e 20 caracteres.',
       );
-    await signInOfficial(email.trim());
-    router.replace('/(main)');
+    if (password.length < 8 || password.length > 64)
+      return Alert.alert(
+        'Confira sua senha',
+        'A senha deve ter entre 8 e 64 caracteres.',
+      );
+
+    setIsSubmitting(true);
+    try {
+      await registerOfficial(normalizedUsername, password);
+      router.replace('/(main)');
+    } catch (error: unknown) {
+      Alert.alert(
+        'Não foi possível criar a conta',
+        error instanceof Error ? error.message : 'Tente novamente em instantes.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Screen scroll safeAreaEdges={['top', 'bottom']}>
       <View style={styles.top}>
         <Link href="/(public)/login" asChild>
-          <Pressable style={[styles.back, { backgroundColor: colors.surface }]}>
+          <Pressable
+            style={StyleSheet.flatten([
+              styles.back,
+              { backgroundColor: colors.surface },
+            ])}
+          >
             <Ionicons name="arrow-back" size={20} color={colors.text} />
           </Pressable>
         </Link>
@@ -50,7 +74,7 @@ export default function RegisterScreen() {
       </Text>
       <View style={styles.form}>
         <Text style={[styles.label, { color: colors.text }]}>
-          Como podemos te chamar?
+          Username
         </Text>
         <View
           style={[
@@ -60,30 +84,13 @@ export default function RegisterScreen() {
         >
           <Ionicons name="person-outline" size={18} color={colors.muted} />
           <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="Seu nome"
+            value={username}
+            onChangeText={setUsername}
+            placeholder="Escolha um username"
             placeholderTextColor={colors.muted}
-            style={[styles.input, { color: colors.text }]}
-          />
-        </View>
-        <Text style={[styles.label, { color: colors.text, marginTop: 19 }]}>
-          E-mail
-        </Text>
-        <View
-          style={[
-            styles.inputWrap,
-            { backgroundColor: colors.input, borderColor: colors.border },
-          ]}
-        >
-          <Ionicons name="mail-outline" size={18} color={colors.muted} />
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="voce@email.com"
-            placeholderTextColor={colors.muted}
-            keyboardType="email-address"
             autoCapitalize="none"
+            autoCorrect={false}
+            maxLength={20}
             style={[styles.input, { color: colors.text }]}
           />
         </View>
@@ -100,21 +107,43 @@ export default function RegisterScreen() {
           <TextInput
             value={password}
             onChangeText={setPassword}
-            placeholder="Mínimo de 6 caracteres"
+            placeholder="Mínimo de 8 caracteres"
             placeholderTextColor={colors.muted}
-            secureTextEntry
+            secureTextEntry={!passwordVisible}
+            maxLength={64}
             style={[styles.input, { color: colors.text }]}
           />
+          <Pressable
+            onPress={() => setPasswordVisible((isVisible) => !isVisible)}
+            accessibilityRole="button"
+            accessibilityLabel={passwordVisible ? 'Ocultar senha' : 'Mostrar senha'}
+          >
+            <Ionicons
+              name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
+              size={19}
+              color={colors.muted}
+            />
+          </Pressable>
         </View>
         <Pressable
           onPress={createAccount}
+          disabled={isSubmitting}
           style={[
             styles.primaryButton,
-            { backgroundColor: colors.accentStrong },
+            {
+              backgroundColor: colors.accentStrong,
+              opacity: isSubmitting ? 0.7 : 1,
+            },
           ]}
         >
-          <Text style={styles.primaryText}>Criar minha conta</Text>
-          <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+          {isSubmitting ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <>
+              <Text style={styles.primaryText}>Criar minha conta</Text>
+              <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+            </>
+          )}
         </Pressable>
       </View>
       <View style={styles.footer}>

@@ -1,5 +1,6 @@
 import AsyncStorage from 'expo-sqlite/kv-store';
 import { Directory, File, Paths } from 'expo-file-system';
+import { clearStoredAccessToken } from '@/src/auth/sessionStorage';
 import { clearLocalAnimeListCountsMemoryCache } from '@/src/data/cache/localAnimeListCountsCache';
 import { clearLocalProfilePhotoMemoryCache } from '@/src/data/cache/localProfilePhoto';
 import { clearProfileStatsMemoryCache } from '@/src/data/cache/localProfileStatsCache';
@@ -32,6 +33,7 @@ export async function deleteAllLocalDeviceData(): Promise<void> {
   clearLocalProfilePhotoMemoryCache();
   clearProfileStatsMemoryCache();
 
+  await clearStoredAccessToken();
   await AsyncStorage.clear();
   deleteManagedFiles(Paths.document, isLocalProfilePhoto);
   deleteManagedFiles(Paths.cache, isLocalCacheFile);

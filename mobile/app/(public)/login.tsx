@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -17,19 +18,39 @@ import { useAuth } from '@/src/auth/AuthContext';
 
 export default function LoginScreen() {
   const { colors } = useTheme();
-  const { signInOfficial } = useAuth();
-  const [email, setEmail] = useState('');
+  const { loginOfficial } = useAuth();
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim())
+    const normalizedUsername = username.trim();
+    if (normalizedUsername.length < 3 || normalizedUsername.length > 20) {
       return Alert.alert(
-        'Faltou preencher',
-        'Informe seu e-mail e sua senha para continuar.',
+        'Confira seu username',
+        'O username deve ter entre 3 e 20 caracteres.',
       );
-    await signInOfficial(email.trim());
-    router.replace('/(main)');
+    }
+    if (password.length < 8 || password.length > 64) {
+      return Alert.alert(
+        'Confira sua senha',
+        'A senha deve ter entre 8 e 64 caracteres.',
+      );
+    }
+
+    setIsSubmitting(true);
+    try {
+      await loginOfficial(normalizedUsername, password);
+      router.replace('/(main)');
+    } catch (error: unknown) {
+      Alert.alert(
+        'Não foi possível entrar',
+        error instanceof Error ? error.message : 'Tente novamente em instantes.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -55,21 +76,23 @@ export default function LoginScreen() {
           </Text>
         </View>
         <View style={styles.form}>
-          <Text style={[styles.label, { color: colors.text }]}>E-mail</Text>
+          <Text style={[styles.label, { color: colors.text }]}>Username</Text>
           <View
             style={[
               styles.inputWrap,
               { backgroundColor: colors.input, borderColor: colors.border },
             ]}
           >
-            <Ionicons name="mail-outline" size={18} color={colors.muted} />
+            <Ionicons name="person-outline" size={18} color={colors.muted} />
             <TextInput
-              value={email}
-              onChangeText={setEmail}
-              placeholder="voce@email.com"
+              value={username}
+              onChangeText={setUsername}
+              placeholder="Seu username"
               placeholderTextColor={colors.muted}
-              keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={20}
+              returnKeyType="next"
               style={[styles.input, { color: colors.text }]}
             />
           </View>
@@ -110,13 +133,23 @@ export default function LoginScreen() {
           </Pressable>
           <Pressable
             onPress={handleLogin}
+            disabled={isSubmitting}
             style={[
               styles.primaryButton,
-              { backgroundColor: colors.accentStrong },
+              {
+                backgroundColor: colors.accentStrong,
+                opacity: isSubmitting ? 0.7 : 1,
+              },
             ]}
           >
-            <Text style={styles.primaryText}>Entrar</Text>
-            <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+            {isSubmitting ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <>
+                <Text style={styles.primaryText}>Entrar</Text>
+                <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+              </>
+            )}
           </Pressable>
         </View>
         <View style={styles.footer}>
