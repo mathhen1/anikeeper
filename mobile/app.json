@@ -27,6 +27,16 @@
       ],
       "expo-font",
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "0b557f92-51d1-476b-8f18-1094328e3870"
+      }
+    }
   }
 }
