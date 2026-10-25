@@ -56,11 +56,12 @@ const menuItems: {
 
 export default function ProfileScreen() {
   const { colors, mode, setMode } = useTheme();
-  const { authMode, localName, signOut } = useAuth();
+  const { authMode, localName, officialUsername, signOut } = useAuth();
   const { width: screenWidth } = useWindowDimensions();
   const isLocalAccount = authMode === 'local';
   const displayName =
-    localName.trim() || (isLocalAccount ? 'Perfil local' : 'Conta oficial');
+    (isLocalAccount ? localName : officialUsername).trim() ||
+    (isLocalAccount ? 'Perfil local' : 'Conta oficial');
   const avatarInitial = displayName.charAt(0).toUpperCase();
   const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
   const [isPhotoModalVisible, setIsPhotoModalVisible] = useState(false);

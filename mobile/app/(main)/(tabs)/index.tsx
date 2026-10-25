@@ -249,7 +249,9 @@ function AnimeRecommendationSection({
 
 export default function HomeScreen() {
   const { colors } = useTheme();
-  const { localName } = useAuth();
+  const { authMode, localName, officialUsername } = useAuth();
+  const profileName =
+    authMode === 'official' ? officialUsername : localName;
   const [mostFavorited, setMostFavorited] = useState<AnimeRecommendationState>({
     items: [],
     isLoading: true,
@@ -379,7 +381,7 @@ export default function HomeScreen() {
       </Pressable>
 
       <ProfileSummaryCard
-        profileName={localName.trim() || 'Animeiro'}
+        profileName={profileName.trim() || 'Animeiro'}
         username={localName}
         description="Sua coleção em um só lugar"
       />
