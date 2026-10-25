@@ -192,6 +192,21 @@ export async function removeAnimeFromLists(userId: string, kitsuId: string) {
   );
 }
 
+export async function getAnimeListStatus(
+  userId: string,
+  kitsuId: string,
+): Promise<AnimeListKey | null> {
+  const anime = await AnimeModel.findOne({ kitsuId }).select('_id');
+  if (!anime) return null;
+
+  const animeList = await AnimeListModel.findOne({
+    user: userId,
+    animes: anime._id,
+  }).select('key');
+
+  return animeList?.key ?? null;
+}
+
 export async function clearAnimeList(userId: string, key: AnimeListKey) {
   await AnimeListModel.updateOne(
     { user: userId, key },

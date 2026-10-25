@@ -6,6 +6,7 @@ import {
   clearAnimeList,
   getAnimeListCounts,
   getAnimeListPage,
+  getAnimeListStatus,
   parseKitsuAnime,
   removeAnimeFromLists,
 } from '../service/anime-list.service.js';
@@ -66,4 +67,14 @@ export async function clearList(request: Request, response: Response) {
 
 export async function getListCounts(request: Request, response: Response) {
   response.json({ data: await getAnimeListCounts(getUserId(request)) });
+}
+
+export async function getAnimeStatus(request: Request, response: Response) {
+  const kitsuId = request.params.kitsuId;
+  if (typeof kitsuId !== 'string' || !kitsuId) {
+    throw new ApiError(400, 'A Kitsu anime ID is required.');
+  }
+
+  const listKey = await getAnimeListStatus(getUserId(request), kitsuId);
+  response.json({ data: { listKey } });
 }
