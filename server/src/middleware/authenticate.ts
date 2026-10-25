@@ -17,15 +17,15 @@ export async function authenticate(
   next: NextFunction,
 ): Promise<void> {
   const authorization = request.header('authorization');
-  const [scheme, token] = authorization?.split(' ') ?? [];
+  const bearerToken = authorization?.match(/^Bearer\s+(\S+)$/i)?.[1];
 
-  if (scheme !== 'Bearer' || !token) {
+  if (!bearerToken) {
     next(new ApiError(401, 'A bearer access token is required.'));
     return;
   }
 
   try {
-    const { userId } = await verifyAccessToken(token);
+    const { userId } = await verifyAccessToken(bearerToken);
     const userExists = await UserModel.exists({ _id: userId });
     if (!userExists) throw new ApiError(401, 'User account was not found.');
 

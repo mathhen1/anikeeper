@@ -29,8 +29,12 @@ export async function verifyAccessToken(
   const secret = getJwtSecret();
 
   try {
-    const { payload } = await jwtVerify(token, secret);
-    if (!payload.sub) throw new Error('Token subject is missing.');
+    const { payload } = await jwtVerify(token, secret, {
+      algorithms: ['HS256'],
+    });
+    if (typeof payload.sub !== 'string' || payload.sub.length === 0) {
+      throw new Error('Token subject is missing.');
+    }
 
     return { userId: payload.sub };
   } catch {
