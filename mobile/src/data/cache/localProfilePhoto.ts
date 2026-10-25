@@ -24,6 +24,10 @@ function getFileName(username: string): string {
   return `${encodeURIComponent(normalizeUsername(username))}.jpg`;
 }
 
+function getCachedWebpFileName(username: string): string {
+  return `${encodeURIComponent(normalizeUsername(username))}.webp`;
+}
+
 function notifyProfilePhotoListeners(username: string, uri: string | null): void {
   const listeners = profilePhotoListeners.get(normalizeUsername(username));
   listeners?.forEach((listener) => listener(uri));
@@ -35,11 +39,46 @@ function cacheProfilePhoto(username: string, uri: string | null): void {
   notifyProfilePhotoListeners(normalizedUsername, uri);
 }
 
+export async function cacheProfilePhotoFile(
+  username: string,
+  sourceUri: string,
+): Promise<string> {
+  const cachedPhoto = new File(Paths.cache, getCachedWebpFileName(username));
+  await new File(sourceUri).copy(cachedPhoto, { overwrite: true });
+  cacheProfilePhoto(username, cachedPhoto.uri);
+  return cachedPhoto.uri;
+}
+
+export async function writeProfilePhotoCache(
+  username: string,
+  imageBytes: Uint8Array,
+): Promise<string> {
+  const cachedPhoto = new File(Paths.cache, getCachedWebpFileName(username));
+  await cachedPhoto.write(imageBytes);
+  cacheProfilePhoto(username, cachedPhoto.uri);
+  return cachedPhoto.uri;
+}
+
+export function clearProfilePhotoCache(username: string): void {
+  const cachedPhoto = new File(Paths.cache, getCachedWebpFileName(username));
+  if (cachedPhoto.exists) cachedPhoto.delete();
+  cacheProfilePhoto(username, null);
+}
+
 export function readLocalProfilePhotoCache(
   username: string,
 ): string | null | undefined {
   const normalizedUsername = normalizeUsername(username);
-  if (!profilePhotoCache.has(normalizedUsername)) return undefined;
+  if (!profilePhotoCache.has(normalizedUsername)) {
+    const cachedPhoto = new File(
+      Paths.cache,
+      getCachedWebpFileName(normalizedUsername),
+    );
+    if (!cachedPhoto.exists) return undefined;
+
+    profilePhotoCache.set(normalizedUsername, cachedPhoto.uri);
+    return cachedPhoto.uri;
+  }
 
   const cachedUri = profilePhotoCache.get(normalizedUsername) ?? null;
   if (cachedUri && !new File(cachedUri).exists) {

@@ -114,6 +114,13 @@ export function updateProfileStatsCache(
   completedAnimes: AnimeInfo[],
 ): ProfileStats {
   const stats = calculateProfileStats(completedAnimes);
+  return updateProfileStatsValueCache(username, stats);
+}
+
+export function updateProfileStatsValueCache(
+  username: string,
+  stats: ProfileStats,
+): ProfileStats {
   memoryCache.set(getCacheKey(username), stats);
 
   try {
