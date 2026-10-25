@@ -6,7 +6,7 @@ AniKeeper é um aplicativo mobile para descobrir animes e manter uma coleção p
 
 ## O que o app oferece
 
-- **Início:** recomendações da Kitsu separadas em favoritos, mais bem avaliados e mais populares, com até oito títulos por seção.
+- **Início:** recomendações da Kitsu separadas em favoritos, mais bem avaliados e mais populares, com carregamento inicial de oito títulos e paginação horizontal.
 - **Minha lista:** coleção dividida em animes concluídos, assistindo atualmente e planejo assistir. É possível pesquisar localmente na lista selecionada.
 - **Adicionar anime:** pesquisa por nome na Kitsu, com histórico de títulos consultados.
 - **Detalhes do anime:** informações do título e ações para adicioná-lo a uma das três listas ou removê-lo da coleção.
@@ -16,14 +16,15 @@ AniKeeper é um aplicativo mobile para descobrir animes e manter uma coleção p
 
 O modo local está funcional para organizar a coleção neste dispositivo. As listas, o nome do perfil e as preferências locais são mantidos no armazenamento do aparelho. As listas são associadas ao username local, permitindo alternar entre perfis locais.
 
-A criação de uma conta oficial e o login oficial ainda são protótipos. O projeto não possui backend nem sincronização em nuvem; essas telas não representam autenticação real.
+O cadastro e o login oficiais usam o backend AniKeeper para validar username e senha. O token JWT fica no `expo-secure-store` e é validado no servidor ao reabrir o app. As listas do modo oficial ainda não foram conectadas à nuvem.
 
 ## Tecnologias
 
 - React Native e Expo
 - Expo Router para navegação por arquivos, grupos de rotas públicas e protegidas
 - TypeScript
-- AsyncStorage para dados locais
+- Expo SQLite KV Store para dados locais
+- Expo SecureStore para o token JWT da sessão oficial
 - Expo FileSystem para arquivos e caches locais
 - Expo ImagePicker para escolher a foto de perfil
 - Expo Screen Orientation e React Native Safe Area Context para orientação e áreas seguras
@@ -43,6 +44,14 @@ No terminal, entre na pasta `mobile` e instale as dependências:
 cd mobile
 npm install
 ```
+
+Configure a URL do backend copiando `.env.example` para `.env`. O valor de exemplo usa o endereço do computador anfitrião visto pelo emulador Android (`10.0.2.2`). Em um aparelho físico, substitua-o pelo endereço IP local do computador que executa o servidor:
+
+```env
+EXPO_PUBLIC_API_URL=http://10.0.2.2:1414/api
+```
+
+O backend também precisa estar em execução na porta configurada. Reinicie o Expo depois de alterar as variáveis `EXPO_PUBLIC_`.
 
 Inicie o projeto no Android:
 
@@ -81,9 +90,9 @@ O layout raiz inicializa os provedores de tema, autenticação, área segura e o
 
 ## Dados locais e privacidade
 
-- As listas são salvas no AsyncStorage e separadas pelo username local.
+- As listas são salvas no Expo SQLite KV Store e separadas pelo username local.
 - A foto de perfil local é escolhida na galeria após a solicitação de permissão e armazenada no dispositivo.
-- O perfil permite exportar os dados locais em um arquivo JSON.
+- O perfil permite exportar os nomes dos animes das listas locais em um arquivo TXT.
 - As opções de gerenciamento permitem renomear o perfil local, limpar suas listas ou excluir o perfil e seus dados associados.
 - A opção de apagar todos os dados do dispositivo fica disponível na entrada do modo local.
 - Os caches de estatísticas e contagens evitam recalcular os resumos a cada navegação.
