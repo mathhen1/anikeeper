@@ -15,6 +15,13 @@ import { AnimeInfo } from '@/src/types/anime';
 import { getAnimeById } from '@/src/data/kitsuApi';
 import { useAuth } from '@/src/auth/AuthContext';
 import {
+  addOfficialAnimeToList,
+  getOfficialAnimeListStatus,
+  refreshOfficialSummaryCaches,
+  removeOfficialAnimeFromLists,
+} from '@/src/data/officialApi';
+import { getAccountCacheKey } from '@/src/data/accountCacheKey';
+import {
   addAnimeToLocalList,
   getAnimeListStatus,
   getLocalAnimeLists,
@@ -28,7 +35,8 @@ export default function AnimeDetailScreen() {
   const params = useLocalSearchParams<{ id: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const { colors } = useTheme();
-  const { authMode, localName } = useAuth();
+  const { authMode, localName, officialUserId, accessToken } = useAuth();
+  const cacheKey = getAccountCacheKey(authMode, localName, officialUserId);
   const [isListMenuOpen, setIsListMenuOpen] = useState(false);
   const [selectedList, setSelectedList] = useState<LocalAnimeListKey | null>(
     null,
@@ -69,17 +77,24 @@ export default function AnimeDetailScreen() {
   }, [id]);
 
   useEffect(() => {
-    if (!remoteAnime || authMode !== 'local' || !localName.trim()) {
+    if (!remoteAnime || authMode === null) {
       setSelectedList(null);
       return;
     }
 
     let isActive = true;
     setSelectedList(null);
-    getLocalAnimeLists(localName)
-      .then((lists) => {
-        if (isActive)
-          setSelectedList(getAnimeListStatus(lists, remoteAnime.id));
+    const listStatus =
+      authMode === 'official' && accessToken
+        ? getOfficialAnimeListStatus(accessToken, remoteAnime.id)
+        : localName.trim()
+          ? getLocalAnimeLists(localName).then((lists) =>
+              getAnimeListStatus(lists, remoteAnime.id),
+            )
+          : Promise.resolve(null);
+    listStatus
+      .then((listKey) => {
+        if (isActive) setSelectedList(listKey);
       })
       .catch((error: unknown) => {
         if (isActive)
@@ -94,7 +109,7 @@ export default function AnimeDetailScreen() {
     return () => {
       isActive = false;
     };
-  }, [authMode, remoteAnime, localName]);
+  }, [accessToken, authMode, remoteAnime, localName]);
 
   const anime = remoteAnime;
 
@@ -134,6 +149,27 @@ export default function AnimeDetailScreen() {
   );
 
   const saveAnimeToList = async (listKey: LocalAnimeListKey) => {
+    if (authMode === 'official' && accessToken) {
+      setIsUpdatingList(true);
+      try {
+        await addOfficialAnimeToList(accessToken, anime, listKey);
+        setSelectedList(listKey);
+        setIsListMenuOpen(false);
+        void refreshOfficialSummaryCaches(accessToken, cacheKey).catch(
+          (cacheError: unknown) => {
+            console.warn('Could not refresh official account summaries.', cacheError);
+          },
+        );
+      } catch (error: unknown) {
+        Alert.alert(
+          'Não foi possível salvar',
+          error instanceof Error ? error.message : 'Tente novamente.',
+        );
+      } finally {
+        setIsUpdatingList(false);
+      }
+      return;
+    }
     if (authMode !== 'local' || !localName.trim()) return;
 
     setIsUpdatingList(true);
@@ -152,6 +188,27 @@ export default function AnimeDetailScreen() {
   };
 
   const removeAnimeFromLists = async () => {
+    if (authMode === 'official' && accessToken) {
+      setIsUpdatingList(true);
+      try {
+        await removeOfficialAnimeFromLists(accessToken, anime.id);
+        setSelectedList(null);
+        setIsListMenuOpen(false);
+        void refreshOfficialSummaryCaches(accessToken, cacheKey).catch(
+          (cacheError: unknown) => {
+            console.warn('Could not refresh official account summaries.', cacheError);
+          },
+        );
+      } catch (error: unknown) {
+        Alert.alert(
+          'Não foi possível remover',
+          error instanceof Error ? error.message : 'Tente novamente.',
+        );
+      } finally {
+        setIsUpdatingList(false);
+      }
+      return;
+    }
     if (authMode !== 'local' || !localName.trim()) return;
 
     setIsUpdatingList(true);
@@ -261,7 +318,7 @@ export default function AnimeDetailScreen() {
         </View>
       </View>
 
-      {authMode === 'local' && (
+      {authMode !== null && (
         <>
           <Pressable
             onPress={() => setIsListMenuOpen((isOpen) => !isOpen)}

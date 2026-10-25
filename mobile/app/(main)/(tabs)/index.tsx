@@ -23,6 +23,7 @@ import {
   getTopRatedAnime,
 } from '@/src/data/kitsuApi';
 import { useAuth } from '@/src/auth/AuthContext';
+import { getAccountCacheKey } from '@/src/data/accountCacheKey';
 import { useTheme } from '@/src/theme/ThemeContext';
 
 const collectionLists = [
@@ -249,7 +250,8 @@ function AnimeRecommendationSection({
 
 export default function HomeScreen() {
   const { colors } = useTheme();
-  const { authMode, localName, officialUsername } = useAuth();
+  const { authMode, localName, officialUsername, officialUserId } = useAuth();
+  const accountCacheKey = getAccountCacheKey(authMode, localName, officialUserId);
   const profileName =
     authMode === 'official' ? officialUsername : localName;
   const [mostFavorited, setMostFavorited] = useState<AnimeRecommendationState>({
@@ -382,12 +384,12 @@ export default function HomeScreen() {
 
       <ProfileSummaryCard
         profileName={profileName.trim() || 'Animeiro'}
-        username={localName}
+        username={accountCacheKey}
         description="Sua coleção em um só lugar"
       />
 
       <AnimeListSummaryCard
-        username={localName}
+        username={accountCacheKey}
         items={collectionLists}
         onPress={() => router.push('/(main)/mylist')}
       />

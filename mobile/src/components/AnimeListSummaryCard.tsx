@@ -9,9 +9,12 @@ import {
   getOrCreateLocalAnimeListCounts,
   readLocalAnimeListCountsCache,
   subscribeToLocalAnimeListCounts,
+  updateLocalAnimeListCountsCache,
   type LocalAnimeListCounts,
 } from '@/src/data/cache/localAnimeListCountsCache';
 import { useTheme } from '@/src/theme/ThemeContext';
+import { useAuth } from '@/src/auth/AuthContext';
+import { getOfficialAnimeListCounts } from '@/src/data/officialApi';
 
 export type AnimeListSummaryItem = {
   key: LocalAnimeListKey;
@@ -38,6 +41,7 @@ export function AnimeListSummaryCard({
   username,
 }: AnimeListSummaryCardProps) {
   const { colors } = useTheme();
+  const { authMode, accessToken } = useAuth();
   const [loadedCounts, setLoadedCounts] = useState<{
     username: string;
     counts: LocalAnimeListCounts | null;
@@ -68,16 +72,32 @@ export function AnimeListSummaryCard({
       },
     );
 
-    getOrCreateLocalAnimeListCounts(username, async () => {
+    const loadCounts = async () => {
+      if (authMode === 'official' && accessToken) {
+        return getOfficialAnimeListCounts(accessToken);
+      }
       const localLists = await getLocalAnimeLists(username);
       return {
         completed: localLists.completed.length,
         watching: localLists.watching.length,
         planned: localLists.planned.length,
       };
-    })
+    };
+
+    const cachedCounts = readLocalAnimeListCountsCache(username);
+    const countsPromise =
+      authMode === 'official'
+        ? accessToken && !cachedCounts
+          ? loadCounts().then((counts) => {
+              updateLocalAnimeListCountsCache(username, counts);
+              return counts;
+            })
+          : Promise.resolve(cachedCounts)
+        : getOrCreateLocalAnimeListCounts(username, loadCounts);
+
+    countsPromise
       .then((counts) => {
-        if (isActive) setLoadedCounts({ username, counts });
+        if (isActive && counts) setLoadedCounts({ username, counts });
       })
       .catch((error: unknown) => {
         if (isActive) console.warn('Could not load anime list counts.', error);
@@ -87,7 +107,7 @@ export function AnimeListSummaryCard({
       isActive = false;
       unsubscribe();
     };
-  }, [username]);
+  }, [accessToken, authMode, username]);
 
   return (
     <View>

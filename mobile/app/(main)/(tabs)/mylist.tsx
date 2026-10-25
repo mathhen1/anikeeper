@@ -15,6 +15,16 @@ import { AnimeArtwork } from '@/src/components/AnimeArtwork';
 import { Screen } from '@/src/components/Screen';
 import { ProfileSummaryCard } from '@/src/components/ProfileSummaryCard';
 import { useAuth } from '@/src/auth/AuthContext';
+import { getAccountCacheKey } from '@/src/data/accountCacheKey';
+import {
+  getOfficialAnimeList,
+  getOfficialAnimeListCounts,
+  type OfficialAnimeListCounts,
+} from '@/src/data/officialApi';
+import {
+  readLocalAnimeListCountsCache,
+  updateLocalAnimeListCountsCache,
+} from '@/src/data/cache/localAnimeListCountsCache';
 import {
   emptyLocalAnimeLists,
   getLocalAnimeLists,
@@ -27,17 +37,36 @@ export default function MyListScreen() {
   const { colors } = useTheme();
   const { width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { authMode, localName } = useAuth();
+  const {
+    authMode,
+    localName,
+    officialUsername,
+    officialUserId,
+    accessToken,
+  } = useAuth();
+  const accountCacheName = getAccountCacheKey(authMode, localName, officialUserId);
   const [selectedList, setSelectedList] =
     useState<(typeof localAnimeListOptions)[number]['key']>('completed');
   const [animeLists, setAnimeLists] =
     useState<LocalAnimeLists>(emptyLocalAnimeLists);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [officialAnime, setOfficialAnime] = useState<
+    typeof animeLists.completed
+  >([]);
+  const [officialCounts, setOfficialCounts] = useState<OfficialAnimeListCounts | null>(
+    () => readLocalAnimeListCountsCache(accountCacheName),
+  );
+  const [officialPage, setOfficialPage] = useState(1);
+  const [officialTotalPages, setOfficialTotalPages] = useState(0);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const currentList = localAnimeListOptions.find(
     (list) => list.key === selectedList,
   )!;
-  const currentAnime = animeLists[selectedList];
+  const isOfficialAccount = authMode === 'official';
+  const currentAnime = isOfficialAccount
+    ? officialAnime
+    : animeLists[selectedList];
   const normalizedSearchQuery = debouncedSearchQuery.trim().toLowerCase();
   const filteredAnime = currentAnime.filter((anime) => {
     if (!normalizedSearchQuery) return true;
@@ -73,6 +102,29 @@ export default function MyListScreen() {
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
+      if (authMode === 'official' && accessToken) {
+        setOfficialCounts(readLocalAnimeListCountsCache(accountCacheName));
+        getOfficialAnimeListCounts(accessToken)
+          .then((counts) => {
+            if (isActive) {
+              updateLocalAnimeListCountsCache(accountCacheName, counts);
+              setOfficialCounts(counts);
+            }
+          })
+          .catch((error: unknown) => {
+            if (isActive) {
+              Alert.alert(
+                'Erro ao carregar listas',
+                error instanceof Error
+                  ? error.message
+                  : 'Não foi possível consultar suas listas.',
+              );
+            }
+          });
+        return () => {
+          isActive = false;
+        };
+      }
       if (authMode !== 'local' || !localName.trim()) {
         setAnimeLists(emptyLocalAnimeLists);
         return;
@@ -95,8 +147,61 @@ export default function MyListScreen() {
       return () => {
         isActive = false;
       };
-    }, [authMode, localName]),
+    }, [accessToken, accountCacheName, authMode, localName]),
   );
+
+  useEffect(() => {
+    if (!isOfficialAccount || !accessToken) return;
+    const controller = new AbortController();
+    setOfficialAnime([]);
+    setOfficialPage(1);
+    setOfficialTotalPages(0);
+
+    getOfficialAnimeList(accessToken, selectedList, {
+      page: 1,
+      limit: 20,
+      query: debouncedSearchQuery,
+      signal: controller.signal,
+    })
+      .then((page) => {
+        setOfficialAnime(page.animes);
+        setOfficialTotalPages(page.pagination.totalPages);
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          Alert.alert(
+            'Erro ao carregar animes',
+            error instanceof Error
+              ? error.message
+              : 'Não foi possível consultar esta lista.',
+          );
+        }
+      });
+
+    return () => controller.abort();
+  }, [accessToken, debouncedSearchQuery, isOfficialAccount, selectedList]);
+
+  const loadMoreOfficialAnime = async () => {
+    if (!accessToken || isLoadingMore || officialPage >= officialTotalPages) return;
+    const nextPage = officialPage + 1;
+    setIsLoadingMore(true);
+    try {
+      const page = await getOfficialAnimeList(accessToken, selectedList, {
+        page: nextPage,
+        limit: 20,
+        query: debouncedSearchQuery,
+      });
+      setOfficialAnime((current) => [...current, ...page.animes]);
+      setOfficialPage(nextPage);
+    } catch (error) {
+      Alert.alert(
+        'Erro ao carregar animes',
+        error instanceof Error ? error.message : 'Tente novamente.',
+      );
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   return (
     <Screen scroll style={styles.screen}>
@@ -106,8 +211,10 @@ export default function MyListScreen() {
         </Text>
       </View>
       <ProfileSummaryCard
-        profileName={localName.trim() || 'Animeiro'}
-        username={localName}
+        profileName={
+          (isOfficialAccount ? officialUsername : localName).trim() || 'Animeiro'
+        }
+        username={accountCacheName}
         description="No seu ritmo."
         topSpacing={0}
       />
@@ -178,7 +285,9 @@ export default function MyListScreen() {
                     { color: isSelected ? '#FFFFFF' : colors.muted },
                   ]}
                 >
-                  {animeLists[list.key].length}
+                  {isOfficialAccount
+                    ? (officialCounts?.[list.key] ?? '—')
+                    : animeLists[list.key].length}
                 </Text>
               </View>
               {isSelected ? (
@@ -203,7 +312,9 @@ export default function MyListScreen() {
           </Text>
         </Pressable>
       </View>
-      {currentAnime.length > 0 ? (
+      {(isOfficialAccount
+        ? (officialCounts?.[selectedList] ?? 0) > 0
+        : currentAnime.length > 0) ? (
         <View
           style={[
             styles.searchField,
@@ -232,7 +343,9 @@ export default function MyListScreen() {
           ) : null}
         </View>
       ) : null}
-      {currentAnime.length === 0 ? (
+      {(isOfficialAccount
+        ? (officialCounts?.[selectedList] ?? 0) === 0
+        : currentAnime.length === 0) ? (
         <View
           style={[
             styles.emptyList,
@@ -304,6 +417,17 @@ export default function MyListScreen() {
           </View>
         )
       )}
+      {isOfficialAccount && officialPage < officialTotalPages ? (
+        <Pressable
+          onPress={loadMoreOfficialAnime}
+          disabled={isLoadingMore}
+          style={[styles.loadMore, { borderColor: colors.border }]}
+        >
+          <Text style={[styles.loadMoreText, { color: colors.accent }]}>
+            {isLoadingMore ? 'Carregando…' : 'Carregar mais'}
+          </Text>
+        </Pressable>
+      ) : null}
       <View style={{ height: 18 }} />
     </Screen>
   );
@@ -400,4 +524,13 @@ const styles = StyleSheet.create({
   animeTitle: { fontSize: 11, lineHeight: 15, fontWeight: '700' },
   animeRating: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   animeRatingText: { fontSize: 10, fontWeight: '600' },
+  loadMore: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+  },
+  loadMoreText: { fontSize: 12, fontWeight: '700' },
 });
