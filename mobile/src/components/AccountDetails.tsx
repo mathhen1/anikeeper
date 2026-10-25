@@ -15,6 +15,10 @@ import {
 } from 'react-native';
 import { useAuth } from '@/src/auth/AuthContext';
 import { clearLocalAnimeLists } from '@/src/data/cache/localAnimeLists';
+import { clearOfficialAnimeData } from '@/src/data/officialApi';
+import { getAccountCacheKey } from '@/src/data/accountCacheKey';
+import { updateLocalAnimeListCountsCache } from '@/src/data/cache/localAnimeListCountsCache';
+import { updateProfileStatsValueCache } from '@/src/data/cache/localProfileStatsCache';
 import { useTheme } from '@/src/theme/ThemeContext';
 
 type AccountDetailsProps = {
@@ -36,10 +40,14 @@ export function AccountDetails({
   const { colors } = useTheme();
   const {
     authMode,
+    accessToken,
     deleteLocalAccount,
+    deleteOfficialAccount,
     isAuthenticated,
     isReady,
     localName,
+    officialUserId,
+    updateOfficialUsername,
     updateLocalName,
   } = useAuth();
   const { width: screenWidth } = useWindowDimensions();
@@ -54,6 +62,7 @@ export function AccountDetails({
   const panelWidth = Math.min(screenWidth * 0.88, 420);
   const profileLabel =
     username.trim() || (isLocalAccount ? 'Perfil local' : 'Conta oficial');
+  const cacheKey = getAccountCacheKey(authMode, localName, officialUserId);
 
   useEffect(() => {
     setEditedUsername(username);
@@ -114,21 +123,14 @@ export function AccountDetails({
   const closeDrawer = () => onClose();
 
   const saveUpdates = async () => {
-    if (!isLocalAccount) {
-      Alert.alert(
-        'Indisponível no protótipo',
-        'As alterações da conta oficial estarão disponíveis quando o login oficial estiver implementado.',
-      );
-      return;
-    }
-
     if (!editedUsername.trim()) {
       Alert.alert('Nome inválido', 'Informe um username para continuar.');
       return;
     }
 
     try {
-      await updateLocalName(editedUsername);
+      if (isLocalAccount) await updateLocalName(editedUsername);
+      else await updateOfficialUsername(editedUsername);
       setIsEditingUsername(false);
       Alert.alert('Username atualizado', 'Seu novo username foi salvo.');
     } catch (error) {
@@ -140,14 +142,7 @@ export function AccountDetails({
   };
 
   const showDeleteDataConfirmation = () => {
-    if (!isLocalAccount) {
-      Alert.alert(
-        'Indisponível no protótipo',
-        'A exclusão dos dados oficiais estará disponível quando o backend for implementado.',
-      );
-      return;
-    }
-    if (!localName.trim()) {
+    if (isLocalAccount && !localName.trim()) {
       Alert.alert('Sessão inválida', 'Entre novamente para continuar.');
       return;
     }
@@ -161,7 +156,23 @@ export function AccountDetails({
           text: 'Excluir listas',
           style: 'destructive',
           onPress: () => {
-            void clearLocalAnimeLists(localName)
+            const clearLists = isLocalAccount
+              ? clearLocalAnimeLists(localName)
+              : accessToken
+                ? clearOfficialAnimeData(accessToken).then(() => {
+                    updateLocalAnimeListCountsCache(cacheKey, {
+                      completed: 0,
+                      watching: 0,
+                      planned: 0,
+                    });
+                    updateProfileStatsValueCache(cacheKey, {
+                      completedAnimeCount: 0,
+                      completedEpisodeCount: 0,
+                      watchedHours: 0,
+                    });
+                  })
+                : Promise.reject(new Error('Sessão oficial inválida.'));
+            void clearLists
               .then(() => {
                 Alert.alert('Listas excluídas', 'Suas listas foram apagadas.');
               })
@@ -178,24 +189,21 @@ export function AccountDetails({
   };
 
   const showDeleteAccountConfirmation = () => {
-    if (!isLocalAccount) {
-      Alert.alert(
-        'Indisponível no protótipo',
-        'A exclusão da conta oficial estará disponível quando o backend for implementado.',
-      );
-      return;
-    }
-
     Alert.alert(
-      'Excluir conta local?',
-      'Sua conta, suas listas e sua foto de perfil serão apagadas deste aparelho. Esta ação não pode ser desfeita.',
+      isLocalAccount ? 'Excluir conta local?' : 'Excluir conta oficial?',
+      isLocalAccount
+        ? 'Sua conta, listas e foto de perfil serão apagadas deste aparelho. Esta ação não pode ser desfeita.'
+        : 'Sua conta e os dados associados serão excluídos do servidor. Esta ação não pode ser desfeita.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Excluir conta',
           style: 'destructive',
           onPress: () => {
-            void deleteLocalAccount()
+            const deleteAccount = isLocalAccount
+              ? deleteLocalAccount()
+              : deleteOfficialAccount();
+            void deleteAccount
               .then(() => router.replace('/(public)'))
               .catch((error: unknown) => {
                 Alert.alert(
@@ -242,7 +250,9 @@ export function AccountDetails({
           ]}
         >
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>Minha conta</Text>
+            <Text style={[styles.title, { color: colors.text }]}>
+              Minha conta
+            </Text>
             <Pressable
               onPress={closeDrawer}
               style={[styles.closeButton, { backgroundColor: colors.elevated }]}
@@ -284,26 +294,24 @@ export function AccountDetails({
             ]}
           >
             <TextInput
-              value={isLocalAccount ? editedUsername : profileLabel}
+              value={editedUsername}
               onChangeText={setEditedUsername}
-              editable={isLocalAccount && isEditingUsername}
-              selectTextOnFocus={isLocalAccount && isEditingUsername}
+              editable={isEditingUsername}
+              selectTextOnFocus={isEditingUsername}
               style={[styles.usernameInput, { color: colors.text }]}
               placeholder="Seu username"
               placeholderTextColor={colors.muted}
               autoCapitalize="none"
               accessibilityLabel="Username do perfil"
             />
-            {isLocalAccount && (
-              <Pressable
-                onPress={() => setIsEditingUsername((isEditing) => !isEditing)}
-                accessibilityRole="button"
-                accessibilityLabel="Editar username"
-                hitSlop={8}
-              >
-                <Ionicons name="pencil" size={17} color={colors.accent} />
-              </Pressable>
-            )}
+            <Pressable
+              onPress={() => setIsEditingUsername((isEditing) => !isEditing)}
+              accessibilityRole="button"
+              accessibilityLabel="Editar username"
+              hitSlop={8}
+            >
+              <Ionicons name="pencil" size={17} color={colors.accent} />
+            </Pressable>
           </View>
 
           <Pressable

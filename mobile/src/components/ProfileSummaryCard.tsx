@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
+  clearProfilePhotoCache,
   getLocalProfilePhoto,
   readLocalProfilePhotoCache,
   subscribeToLocalProfilePhoto,
@@ -10,11 +11,19 @@ import {
 import { getLocalAnimeLists } from '@/src/data/cache/localAnimeLists';
 import {
   getOrCreateProfileStats,
-  ProfileStats,
+  type ProfileStats,
   readProfileStatsCache,
   subscribeToProfileStats,
+  updateProfileStatsValueCache,
 } from '@/src/data/cache/localProfileStatsCache';
 import { useTheme } from '@/src/theme/ThemeContext';
+import { useAuth } from '@/src/auth/AuthContext';
+import {
+  getOfficialProfile,
+  getOfficialProfilePhotoBytes,
+  getOfficialProfileStats,
+} from '@/src/data/officialApi';
+import { writeProfilePhotoCache } from '@/src/data/cache/localProfilePhoto';
 
 type ProfileSummaryCardProps = {
   profileName: string;
@@ -30,6 +39,7 @@ export function ProfileSummaryCard({
   topSpacing = 19,
 }: ProfileSummaryCardProps) {
   const { colors } = useTheme();
+  const { authMode, accessToken } = useAuth();
   const [loadedStats, setLoadedStats] = useState<{
     username: string;
     stats: ProfileStats | null;
@@ -51,22 +61,36 @@ export function ProfileSummaryCard({
       setLoadedStats({ username, stats: updatedStats });
     });
 
-    getOrCreateProfileStats(username, async () => {
-      const localLists = await getLocalAnimeLists(username);
-      return localLists.completed;
-    })
-      .then((profileStats) => {
-        if (isActive) setLoadedStats({ username, stats: profileStats });
+    const cachedStats = readProfileStatsCache(username);
+    if (authMode === 'official') {
+      if (accessToken && !cachedStats) {
+        void getOfficialProfileStats(accessToken)
+          .then((officialStats) => {
+            updateProfileStatsValueCache(username, officialStats);
+            if (isActive) setLoadedStats({ username, stats: officialStats });
+          })
+          .catch((error: unknown) => {
+            if (isActive) console.warn('Could not load official profile stats.', error);
+          });
+      }
+    } else {
+      void getOrCreateProfileStats(username, async () => {
+        const localLists = await getLocalAnimeLists(username);
+        return localLists.completed;
       })
-      .catch((error: unknown) => {
-        if (isActive) console.warn('Could not load profile stats.', error);
-      });
+        .then((profileStats) => {
+          if (isActive) setLoadedStats({ username, stats: profileStats });
+        })
+        .catch((error: unknown) => {
+          if (isActive) console.warn('Could not load profile stats.', error);
+        });
+    }
 
     return () => {
       isActive = false;
       unsubscribe();
     };
-  }, [username]);
+  }, [accessToken, authMode, username]);
 
   useEffect(() => {
     setProfilePhotoUri(readLocalProfilePhotoCache(username) ?? null);
@@ -77,19 +101,40 @@ export function ProfileSummaryCard({
       setProfilePhotoUri(uri);
     });
 
-    getLocalProfilePhoto(username)
+    const cachedPhoto = readLocalProfilePhotoCache(username);
+    if (authMode === 'official' && (cachedPhoto !== undefined || !accessToken)) {
+      return () => {
+        isActive = false;
+        unsubscribe();
+      };
+    }
+
+    const loadPhoto = async () => {
+      if (authMode === 'official' && accessToken) {
+        const profile = await getOfficialProfile(accessToken);
+        if (!profile.hasProfilePhoto) {
+          clearProfilePhotoCache(username);
+          return null;
+        }
+        const imageBytes = await getOfficialProfilePhotoBytes(accessToken);
+        return writeProfilePhotoCache(username, imageBytes);
+      }
+      return getLocalProfilePhoto(username);
+    };
+
+    loadPhoto()
       .then((uri) => {
         if (isActive) setProfilePhotoUri(uri);
       })
       .catch((error: unknown) => {
-        if (isActive) console.warn('Could not load local profile photo.', error);
+        if (isActive) console.warn('Could not load profile photo.', error);
       });
 
     return () => {
       isActive = false;
       unsubscribe();
     };
-  }, [username]);
+  }, [accessToken, authMode, username]);
 
   const completedAnimeCount = stats?.completedAnimeCount ?? '—';
   const completedEpisodeCount = stats?.completedEpisodeCount ?? '—';

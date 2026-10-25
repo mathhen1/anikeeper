@@ -12,7 +12,10 @@ function isDownloadsDirectory(directoryUri: string): boolean {
   return decodeURIComponent(directoryUri).toLowerCase().includes('download');
 }
 
-export async function exportLocalAnimeData(username: string): Promise<void> {
+export async function exportAnimeTextFile(
+  fileName: string,
+  exportContent: string,
+): Promise<void> {
   if (Platform.OS !== 'android') {
     throw new Error('A exportação para Downloads está disponível no Android.');
   }
@@ -32,6 +35,16 @@ export async function exportLocalAnimeData(username: string): Promise<void> {
     throw new Error('Selecione a pasta Downloads para salvar o arquivo.');
   }
 
+  const fileUri = await StorageAccessFramework.createFileAsync(
+    permission.directoryUri,
+    fileName,
+    'text/plain',
+  );
+
+  await writeAsStringAsync(fileUri, exportContent);
+}
+
+export async function exportLocalAnimeData(username: string): Promise<void> {
   const localLists = await getLocalAnimeLists(username);
   const exportSections = localAnimeListOptions.map((list) => {
     const animeTitles = localLists[list.key]
@@ -42,11 +55,5 @@ export async function exportLocalAnimeData(username: string): Promise<void> {
     return `${heading}\n\n${animeTitles.join('\n')}`;
   });
   const exportContent = exportSections.join('\n\n');
-  const fileUri = await StorageAccessFramework.createFileAsync(
-    permission.directoryUri,
-    'anikeeper-listas.txt',
-    'text/plain',
-  );
-
-  await writeAsStringAsync(fileUri, exportContent);
+  await exportAnimeTextFile('anikeeper-listas.txt', exportContent);
 }

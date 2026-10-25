@@ -18,18 +18,32 @@ import {
 import { Screen } from '@/src/components/Screen';
 import { AccountDetails } from '@/src/components/AccountDetails';
 import { useAuth } from '@/src/auth/AuthContext';
+import { getAccountCacheKey } from '@/src/data/accountCacheKey';
 import {
+  deleteOfficialProfilePhoto,
+  exportOfficialAnimeLists,
+  getOfficialProfile,
+  getOfficialProfilePhotoBytes,
+  getOfficialProfileStats,
+  uploadOfficialProfilePhoto,
+} from '@/src/data/officialApi';
+import {
+  clearProfilePhotoCache,
+  deleteLocalProfilePhoto,
   getLocalProfilePhoto,
   saveLocalProfilePhoto,
+  writeProfilePhotoCache,
 } from '@/src/data/cache/localProfilePhoto';
 import { ThemeMode, useTheme } from '@/src/theme/ThemeContext';
 import { getLocalAnimeLists } from '@/src/data/cache/localAnimeLists';
-import { exportLocalAnimeData } from '@/src/data/localAnimeExport';
+import { updateLocalAnimeListCountsCache } from '@/src/data/cache/localAnimeListCountsCache';
+import { exportAnimeTextFile, exportLocalAnimeData } from '@/src/data/localAnimeExport';
 import {
   getOrCreateProfileStats,
   type ProfileStats,
   readProfileStatsCache,
   subscribeToProfileStats,
+  updateProfileStatsValueCache,
 } from '@/src/data/cache/localProfileStatsCache';
 
 const menuItems: {
@@ -56,9 +70,17 @@ const menuItems: {
 
 export default function ProfileScreen() {
   const { colors, mode, setMode } = useTheme();
-  const { authMode, localName, officialUsername, signOut } = useAuth();
+  const {
+    authMode,
+    localName,
+    officialUsername,
+    officialUserId,
+    accessToken,
+    signOut,
+  } = useAuth();
   const { width: screenWidth } = useWindowDimensions();
   const isLocalAccount = authMode === 'local';
+  const cacheKey = getAccountCacheKey(authMode, localName, officialUserId);
   const displayName =
     (isLocalAccount ? localName : officialUsername).trim() ||
     (isLocalAccount ? 'Perfil local' : 'Conta oficial');
@@ -70,60 +92,105 @@ export default function ProfileScreen() {
   const [isExportingData, setIsExportingData] = useState(false);
   const photoSize = Math.min(screenWidth - 48, 420);
   const [profileStats, setProfileStats] = useState<ProfileStats | null>(() =>
-    readProfileStatsCache(localName),
+    readProfileStatsCache(cacheKey),
   );
 
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
-      if (!isLocalAccount || !localName.trim()) {
+      if (isLocalAccount && localName.trim()) {
+        setProfileStats(readProfileStatsCache(cacheKey));
+        const unsubscribeFromProfileStats = subscribeToProfileStats(
+          cacheKey,
+          (stats) => {
+            if (isActive) setProfileStats(stats);
+          },
+        );
+        getOrCreateProfileStats(localName, async () => {
+          const localLists = await getLocalAnimeLists(localName);
+          return localLists.completed;
+        })
+          .then((stats) => {
+            if (isActive) setProfileStats(stats);
+          })
+          .catch((error: unknown) => {
+            if (isActive) {
+              Alert.alert(
+                'Erro ao carregar estatísticas',
+                error instanceof Error
+                  ? error.message
+                  : 'Não foi possível calcular os dados do perfil.',
+              );
+            }
+          });
+        getLocalProfilePhoto(localName)
+          .then((photoUri) => {
+            if (isActive) setProfilePhotoUri(photoUri);
+          })
+          .catch((error: unknown) => {
+            if (isActive) {
+              Alert.alert(
+                'Erro ao carregar foto',
+                error instanceof Error
+                  ? error.message
+                  : 'Não foi possível carregar sua foto de perfil.',
+              );
+            }
+          });
+        return () => {
+          isActive = false;
+          unsubscribeFromProfileStats();
+        };
+      }
+
+      if (authMode === 'official' && accessToken) {
+        setProfileStats(readProfileStatsCache(cacheKey));
+        const unsubscribeFromProfileStats = subscribeToProfileStats(
+          cacheKey,
+          (stats) => {
+            if (isActive) setProfileStats(stats);
+          },
+        );
+        Promise.all([
+          getOfficialProfileStats(accessToken),
+          getOfficialProfile(accessToken),
+        ])
+          .then(async ([stats, profile]) => {
+            if (!isActive) return;
+            updateProfileStatsValueCache(cacheKey, stats);
+            updateLocalAnimeListCountsCache(cacheKey, profile.animeLists);
+            setProfileStats(stats);
+            if (!profile.hasProfilePhoto) {
+              clearProfilePhotoCache(cacheKey);
+              setProfilePhotoUri(null);
+              return;
+            }
+            const imageBytes = await getOfficialProfilePhotoBytes(accessToken);
+            const photoUri = await writeProfilePhotoCache(cacheKey, imageBytes);
+            if (isActive) setProfilePhotoUri(photoUri);
+          })
+          .catch((error: unknown) => {
+            if (isActive) {
+              Alert.alert(
+                'Erro ao carregar perfil',
+                error instanceof Error
+                  ? error.message
+                  : 'Não foi possível consultar os dados da conta.',
+              );
+            }
+          });
+        return () => {
+          isActive = false;
+          unsubscribeFromProfileStats();
+        };
+      }
+
+      if (!authMode) {
         setProfileStats(null);
         setProfilePhotoUri(null);
         return;
       }
-
-      setProfileStats(readProfileStatsCache(localName));
-      const unsubscribeFromProfileStats = subscribeToProfileStats(
-        localName,
-        (stats) => {
-          if (isActive) setProfileStats(stats);
-        },
-      );
-      getOrCreateProfileStats(localName, async () => {
-        const localLists = await getLocalAnimeLists(localName);
-        return localLists.completed;
-      })
-        .then((stats) => {
-          if (isActive) setProfileStats(stats);
-        })
-        .catch((error: unknown) => {
-          if (isActive)
-            Alert.alert(
-              'Erro ao carregar estatísticas',
-              error instanceof Error
-                ? error.message
-                : 'Não foi possível calcular os dados do perfil.',
-            );
-        });
-      getLocalProfilePhoto(localName)
-        .then((photoUri) => {
-          if (isActive) setProfilePhotoUri(photoUri);
-        })
-        .catch((error: unknown) => {
-          if (isActive) {
-            Alert.alert(
-              'Erro ao carregar foto',
-              error instanceof Error
-                ? error.message
-                : 'Não foi possível carregar sua foto de perfil.',
-            );
-          }
-        });
-      return () => {
-        isActive = false;
-        unsubscribeFromProfileStats();
-      };
-    }, [isLocalAccount, localName]),
+    }, [accessToken, authMode, cacheKey, isLocalAccount, localName]),
   );
 
   const handleSignOut = async () => {
@@ -132,20 +199,22 @@ export default function ProfileScreen() {
   };
 
   const exportUserData = async () => {
-    if (!isLocalAccount || !localName.trim()) {
-      Alert.alert(
-        'Exportação indisponível',
-        'A exportação local está disponível para perfis locais.',
-      );
-      return;
-    }
-
     setIsExportingData(true);
     try {
-      await exportLocalAnimeData(localName);
+      if (isLocalAccount && localName.trim()) {
+        await exportLocalAnimeData(localName);
+      } else if (authMode === 'official' && accessToken) {
+        const exportContent = await exportOfficialAnimeLists(accessToken);
+        await exportAnimeTextFile(
+          `${officialUsername || 'anikeeper'}.txt`,
+          exportContent,
+        );
+      } else {
+        throw new Error('Sessão inválida. Entre novamente para continuar.');
+      }
       Alert.alert(
         'Dados exportados',
-        'O arquivo anikeeper-listas.txt foi salvo na pasta Downloads.',
+        'O arquivo de texto foi salvo na pasta Downloads.',
       );
     } catch (error) {
       Alert.alert(
@@ -228,10 +297,23 @@ export default function ProfileScreen() {
 
       if (selection.canceled || !selection.assets[0]) return;
 
-      const savedPhotoUri = await saveLocalProfilePhoto(
-        localName,
-        selection.assets[0].uri,
-      );
+      let savedPhotoUri: string;
+      if (isLocalAccount && localName.trim()) {
+        savedPhotoUri = await saveLocalProfilePhoto(
+          localName,
+          selection.assets[0].uri,
+        );
+      } else if (authMode === 'official' && accessToken) {
+        await uploadOfficialProfilePhoto(
+          accessToken,
+          selection.assets[0].uri,
+          selection.assets[0].mimeType ?? 'image/jpeg',
+        );
+        const imageBytes = await getOfficialProfilePhotoBytes(accessToken);
+        savedPhotoUri = await writeProfilePhotoCache(cacheKey, imageBytes);
+      } else {
+        throw new Error('Sessão inválida. Entre novamente para alterar a foto.');
+      }
       setProfilePhotoUri(savedPhotoUri);
     } catch (error) {
       Alert.alert(
@@ -245,6 +327,23 @@ export default function ProfileScreen() {
     }
   };
 
+  const removeProfilePhoto = async () => {
+    try {
+      if (isLocalAccount && localName.trim()) {
+        await deleteLocalProfilePhoto(localName);
+      } else if (authMode === 'official' && accessToken) {
+        await deleteOfficialProfilePhoto(accessToken);
+        clearProfilePhotoCache(cacheKey);
+      }
+      setProfilePhotoUri(null);
+    } catch (error) {
+      Alert.alert(
+        'Não foi possível remover a foto',
+        error instanceof Error ? error.message : 'Tente novamente.',
+      );
+    }
+  };
+
   const showProfilePhotoOptions = () => {
     const actions = profilePhotoUri
       ? [
@@ -253,6 +352,11 @@ export default function ProfileScreen() {
             onPress: () => setIsPhotoModalVisible(true),
           },
           { text: 'Alterar foto', onPress: changeProfilePhoto },
+          {
+            text: 'Remover foto',
+            style: 'destructive' as const,
+            onPress: removeProfilePhoto,
+          },
           { text: 'Cancelar', style: 'cancel' as const },
         ]
       : [
@@ -274,7 +378,7 @@ export default function ProfileScreen() {
       >
         <Pressable
           onPress={showProfilePhotoOptions}
-          disabled={!isLocalAccount || isChangingPhoto}
+          disabled={!authMode || isChangingPhoto}
           accessibilityRole="button"
           accessibilityLabel="Opções da foto de perfil"
           style={({ pressed }) => [
@@ -294,7 +398,7 @@ export default function ProfileScreen() {
               {avatarInitial}
             </Text>
           )}
-          {isLocalAccount && (
+          {authMode && (
             <View
               style={[styles.avatarEditBadge, { backgroundColor: colors.accent }]}
             >
