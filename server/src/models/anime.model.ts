@@ -1,4 +1,4 @@
-import { model, models, Schema, type InferSchemaType } from 'mongoose';
+import mongoose, { Schema, type InferSchemaType } from 'mongoose';
 
 const animeSchema = new Schema(
   {
@@ -57,4 +57,4 @@ const animeSchema = new Schema(
 export type Anime = InferSchemaType<typeof animeSchema>;
 
 export const AnimeModel =
-  models.Anime ?? model('Anime', animeSchema);
+  mongoose.models.Anime ?? mongoose.model('Anime', animeSchema);

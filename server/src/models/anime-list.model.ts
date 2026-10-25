@@ -1,4 +1,4 @@
-import { model, models, Schema, type InferSchemaType } from 'mongoose';
+import mongoose, { Schema, type InferSchemaType } from 'mongoose';
 
 export const animeListKeys = ['completed', 'watching', 'planned'] as const;
 
@@ -32,4 +32,4 @@ animeListSchema.index({ user: 1, key: 1 }, { unique: true });
 export type AnimeList = InferSchemaType<typeof animeListSchema>;
 
 export const AnimeListModel =
-  models.AnimeList ?? model('AnimeList', animeListSchema);
+  mongoose.models.AnimeList ?? mongoose.model('AnimeList', animeListSchema);
